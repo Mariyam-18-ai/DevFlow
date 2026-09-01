@@ -88,7 +88,7 @@ export function WorkOverview({
               TASKS
             </span>
 
-            <h2>Today's tasks</h2>
+            <h2>All Tasks</h2>
           </div>
 
           <TaskFilters
