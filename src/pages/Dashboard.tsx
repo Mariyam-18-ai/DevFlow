@@ -37,10 +37,11 @@ interface DashboardProps {
   activePage: ActivePage;
   workspace: string;
   onNavigate: (page: ActivePage) => void;
-  /** Mirrors live task state up to App so the navbar's command
-   * palette can search current (post-completion) task state without
-   * duplicating this component's task-mutation logic. */
   onTasksChange?: (tasks: Task[]) => void;
+  searchTarget?: {
+    type: "task" | "project" | "person";
+    id: string;
+  } | null;
 }
 
 const PAGE_COPY: Record<
@@ -72,6 +73,7 @@ export function Dashboard({
   workspace,
   onNavigate,
   onTasksChange,
+  searchTarget,
 }: DashboardProps) {
   const { status, retry } = useDashboardData();
 
@@ -85,22 +87,52 @@ export function Dashboard({
     onTasksChange?.(tasks);
   }, [tasks, onTasksChange]);
 
-  const [focusTaskId, setFocusTaskId] = useState<string | null>(null);
-  const [flowSelectedTaskId, setFlowSelectedTaskId] = useState<string | null>(
-  null
-);
- const [highlightedProjectId, setHighlightedProjectId] = useState<string | null>(
-  null
-);
+const [focusTaskId, setFocusTaskId] = useState<string | null>(null);
+
+const [flowSelectedTaskId, setFlowSelectedTaskId] =
+  useState<string | null>(null);
+
+useEffect(() => {
+  if (searchTarget?.type !== "task") return;
+
+  const timer = window.setTimeout(() => {
+    setFlowSelectedTaskId(searchTarget.id);
+
+    document
+      .getElementById("today-flow-map")
+      ?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+  }, 100);
+
+  return () => window.clearTimeout(timer);
+}, [searchTarget]);
+
+const [highlightedProjectId, setHighlightedProjectId] =
+  useState<string | null>(null);
 
 const filteredProjects = useMemo(
   () => searchProjects(mockProjects, searchQuery, tasks),
   [searchQuery, tasks]
 );
-  const searchedTasks = useMemo(
-    () => searchTasks(tasks, searchQuery, mockUsers),
-    [tasks, searchQuery]
-  );
+
+const searchedTasks = useMemo(
+  () => searchTasks(tasks, searchQuery, mockUsers),
+  [tasks, searchQuery]
+);
+
+const searchedUsers = useMemo(
+  () =>
+    searchQuery.trim()
+      ? mockUsers.filter((user) =>
+          `${user.name} ${user.role}`
+            .toLowerCase()
+            .includes(searchQuery.trim().toLowerCase())
+        )
+      : mockUsers,
+  [searchQuery]
+);
 
   const bestNextTask = getBestNextTask(tasks, mockProjects);
 
@@ -337,12 +369,12 @@ const filteredProjects = useMemo(
         {status === "success" && activePage === "team" && (
           <>
             <TeamPulse
-              users={mockUsers}
+              users={searchedUsers}
               tasks={tasks}
               projects={mockProjects}
               onInspectTask={handleInspectTask}
             />
-            <WorkloadChart users={mockUsers} tasks={tasks} />
+            <WorkloadChart users={searchedUsers} tasks={tasks} />
             <Blockers
               tasks={tasks}
               projects={mockProjects}

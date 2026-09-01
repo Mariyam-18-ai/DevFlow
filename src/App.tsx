@@ -10,33 +10,51 @@ import { mockUsers } from "./data/mockUsers";
 import { Settings } from "./pages/Settings";
 import { Profile } from "./pages/Profile";
 
-// Dashboard only ever renders its own four tabs (see ActivePage in
-// pages/Dashboard.tsx). Settings and Profile are separate top-level
-// pages App renders directly, so the app-wide page state is a
-// superset of Dashboard's own page type rather than forcing
-// Dashboard to know about pages it never shows.
 type AppPage = ActivePage | "settings" | "profile";
 
 function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activePage, setActivePage] = useState<AppPage>("today");
-  const [workspace, setWorkspace] = useState<string>(WORKSPACES[0]);
 
-  // Mirrors Dashboard's live task state (including completions) so the
-  // navbar's command palette searches current data, not the static
-  // mock import — without moving task-mutation logic out of Dashboard.
-  const [liveTasks, setLiveTasks] = useState<Task[]>(mockTasks);
+  const [activePage, setActivePage] =
+    useState<AppPage>("today");
 
-  function handleNavigateToResult() {
-    setActivePage("today");
+  const [workspace, setWorkspace] =
+    useState<string>(WORKSPACES[0]);
+
+  const [liveTasks, setLiveTasks] =
+    useState<Task[]>(mockTasks);
+
+  const [searchTarget, setSearchTarget] = useState<{
+    type: "task" | "project" | "person";
+    id: string;
+  } | null>(null);
+
+ function handleNavigateToResult(
+  type: "task" | "project" | "person",
+  id: string
+) {
+    setSearchTarget({
+      type,
+      id,
+    });
+
+    if (type === "task") {
+      setActivePage("today");
+    } else if (type === "project") {
+      setActivePage("work");
+    } else {
+      setActivePage("team");
+    }
   }
 
   return (
     <div className="df-app">
       <Sidebar
         activePage={activePage}
-        onPageChange={(page) => setActivePage(page as AppPage)}
+        onPageChange={(page) =>
+          setActivePage(page as AppPage)
+        }
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         workspace={workspace}
@@ -52,14 +70,16 @@ function App() {
           projects={mockProjects}
           users={mockUsers}
           onNavigateToResult={handleNavigateToResult}
-          onNavigate={(page) => setActivePage(page)}
+          onNavigate={(page) =>
+            setActivePage(page)
+          }
         />
 
         {activePage === "settings" ? (
-          <Settings
-  workspace={workspace}
-  onWorkspaceChange={setWorkspace}
-/>
+  <Settings
+    workspace={workspace}
+    onWorkspaceChange={setWorkspace}
+  />
         ) : activePage === "profile" ? (
           <Profile tasks={liveTasks} />
         ) : (
@@ -69,6 +89,7 @@ function App() {
             workspace={workspace}
             onNavigate={setActivePage}
             onTasksChange={setLiveTasks}
+            searchTarget={searchTarget}
           />
         )}
       </div>

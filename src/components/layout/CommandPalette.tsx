@@ -7,14 +7,19 @@ interface CommandPaletteProps {
   tasks: Task[];
   projects: Project[];
   users: User[];
-  onSelectResult: (label: string) => void;
+  onSelectResult: (
+    type: "task" | "project" | "person",
+    id: string,
+    label: string
+  ) => void;
 }
 
 /**
- * Dropdown results panel for the navbar search input. It reuses the
- * same `search` value that already drives the Today page's live
- * filtering (via searchTasks/searchProjects) — this is a view over
- * that one search system, not a second one.
+ * Search results dropdown for tasks, projects and people.
+ *
+ * Selecting a result tells the parent what kind of result was selected
+ * and which specific item was clicked so navigation can go to the
+ * appropriate page.
  */
 export function CommandPalette({
   query,
@@ -29,7 +34,11 @@ export function CommandPalette({
     const recent = mockActivity.slice(0, 4);
 
     return (
-      <div className="df-command-palette" role="listbox" aria-label="Search results">
+      <div
+        className="df-command-palette"
+        role="listbox"
+        aria-label="Search results"
+      >
         <div className="df-command-group">
           <span className="df-command-group-label">Recent</span>
 
@@ -46,12 +55,20 @@ export function CommandPalette({
                 role="option"
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  onSelectResult(relatedTask?.title ?? "");
+
+                  if (relatedTask) {
+                    onSelectResult(
+                      "task",
+                      relatedTask.id,
+                      relatedTask.title
+                    );
+                  }
                 }}
               >
                 <span className="df-command-item-title">
                   {item.message}
                 </span>
+
                 <span className="df-command-item-subtitle">
                   {item.timestamp}
                 </span>
@@ -70,7 +87,11 @@ export function CommandPalette({
   const results = searchAll(trimmed, tasks, projects, users);
 
   return (
-    <div className="df-command-palette" role="listbox" aria-label="Search results">
+    <div
+      className="df-command-palette"
+      role="listbox"
+      aria-label="Search results"
+    >
       {results.total === 0 && (
         <div className="df-command-empty">
           No results found for &ldquo;{query}&rdquo;
@@ -80,10 +101,12 @@ export function CommandPalette({
       {results.tasks.length > 0 && (
         <div className="df-command-group">
           <span className="df-command-group-label">Tasks</span>
+
           {results.tasks.map((task) => {
             const project = projects.find(
               (p) => p.id === task.projectId
             );
+
             return (
               <button
                 type="button"
@@ -92,12 +115,18 @@ export function CommandPalette({
                 role="option"
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  onSelectResult(task.title);
+
+                  onSelectResult(
+                    "task",
+                    task.id,
+                    task.title
+                  );
                 }}
               >
                 <span className="df-command-item-title">
                   {task.title}
                 </span>
+
                 <span className="df-command-item-subtitle">
                   {project?.name ?? "No project"}
                 </span>
@@ -110,6 +139,7 @@ export function CommandPalette({
       {results.projects.length > 0 && (
         <div className="df-command-group">
           <span className="df-command-group-label">Projects</span>
+
           {results.projects.map((project) => (
             <button
               type="button"
@@ -118,12 +148,18 @@ export function CommandPalette({
               role="option"
               onMouseDown={(e) => {
                 e.preventDefault();
-                onSelectResult(project.name);
+
+                onSelectResult(
+                  "project",
+                  project.id,
+                  project.name
+                );
               }}
             >
               <span className="df-command-item-title">
                 {project.name}
               </span>
+
               <span className="df-command-item-subtitle">
                 {project.description}
               </span>
@@ -135,6 +171,7 @@ export function CommandPalette({
       {results.people.length > 0 && (
         <div className="df-command-group">
           <span className="df-command-group-label">People</span>
+
           {results.people.map((person) => (
             <button
               type="button"
@@ -143,12 +180,18 @@ export function CommandPalette({
               role="option"
               onMouseDown={(e) => {
                 e.preventDefault();
-                onSelectResult(person.name);
+
+                onSelectResult(
+                  "person",
+                  person.id,
+                  person.name
+                );
               }}
             >
               <span className="df-command-item-title">
                 {person.name}
               </span>
+
               <span className="df-command-item-subtitle">
                 {person.role}
               </span>

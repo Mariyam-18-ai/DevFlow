@@ -11,9 +11,13 @@ interface NavbarProps {
   tasks: Task[];
   projects: Project[];
   users: User[];
-  /** Called when a palette result is selected; navigates back to the
-   * Today page where the shared search/filter pipeline renders it. */
-  onNavigateToResult: () => void;
+
+  onNavigateToResult: (
+    type: "task" | "project" | "person",
+    id: string,
+    label: string
+  ) => void;
+
   onNavigate: (page: "settings" | "profile") => void;
 }
 
@@ -29,14 +33,18 @@ export function Navbar({
 }: NavbarProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === "k"
+      ) {
         event.preventDefault();
         inputRef.current?.focus();
         setPaletteOpen(true);
@@ -44,23 +52,35 @@ export function Navbar({
     }
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
       const target = event.target as Node;
-      if (!profileRef.current?.contains(target)) setProfileOpen(false);
-      if (!notificationRef.current?.contains(target)) setNotificationsOpen(false);
+
+      if (!profileRef.current?.contains(target)) {
+        setProfileOpen(false);
+      }
+
+      if (!notificationRef.current?.contains(target)) {
+        setNotificationsOpen(false);
+      }
     }
+
     function handleEscapeKey(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setProfileOpen(false);
         setNotificationsOpen(false);
       }
     }
+
     document.addEventListener("mousedown", handleOutsideClick);
     document.addEventListener("keydown", handleEscapeKey);
+
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
       document.removeEventListener("keydown", handleEscapeKey);
@@ -73,18 +93,19 @@ export function Navbar({
     inputRef.current?.blur();
   }
 
-function handleSelectResult(label: string) {
-  onSearchChange(label);
-  setPaletteOpen(false);
-  onNavigateToResult();
-  inputRef.current?.blur();
+  function handleSelectResult(
+    type: "task" | "project" | "person",
+    id: string,
+    label: string
+  ) {
+    onSearchChange(label);
+    setPaletteOpen(false);
 
-  window.setTimeout(() => {
-    document
-      .getElementById("today-flow-map")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, 100);
-}
+    onNavigateToResult(type, id, label);
+
+    inputRef.current?.blur();
+  }
+
   return (
     <header className="df-navbar">
       <div className="df-mobile-brand">
@@ -107,13 +128,20 @@ function handleSelectResult(label: string) {
           <input
             ref={inputRef}
             value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
+            onChange={(event) =>
+              onSearchChange(event.target.value)
+            }
             onFocus={() => setPaletteOpen(true)}
             onBlur={() =>
-              window.setTimeout(() => setPaletteOpen(false), 120)
+              window.setTimeout(
+                () => setPaletteOpen(false),
+                120
+              )
             }
             onKeyDown={(event) => {
-              if (event.key === "Escape") handleEscape();
+              if (event.key === "Escape") {
+                handleEscape();
+              }
             }}
             placeholder="Search tasks, projects or people"
             aria-label="Search"
@@ -134,7 +162,10 @@ function handleSelectResult(label: string) {
       </div>
 
       <div className="df-navbar-actions">
-        <div className="df-notification-menu" ref={notificationRef}>
+        <div
+          className="df-notification-menu"
+          ref={notificationRef}
+        >
           <button
             type="button"
             className="df-icon-button"
@@ -142,28 +173,53 @@ function handleSelectResult(label: string) {
             aria-expanded={notificationsOpen}
             aria-haspopup="true"
             title="Notifications"
-            onClick={() => setNotificationsOpen((value) => !value)}
+            onClick={() =>
+              setNotificationsOpen((value) => !value)
+            }
           >
             <span aria-hidden="true">♢</span>
           </button>
+
           {notificationsOpen && (
-            <div className="df-notification-dropdown" role="menu">
+            <div
+              className="df-notification-dropdown"
+              role="menu"
+            >
               <strong>Notifications</strong>
-              <button type="button" role="menuitem">Billing Migration is at risk</button>
-              <button type="button" role="menuitem">2 tasks are due today</button>
+
+              <button
+                type="button"
+                role="menuitem"
+              >
+                Billing Migration is at risk
+              </button>
+
+              <button
+                type="button"
+                role="menuitem"
+              >
+                2 tasks are due today
+              </button>
             </div>
           )}
         </div>
 
-        <div className="df-profile-menu" ref={profileRef}>
+        <div
+          className="df-profile-menu"
+          ref={profileRef}
+        >
           <button
             type="button"
             className="df-profile-trigger"
-            onClick={() => setProfileOpen((value) => !value)}
+            onClick={() =>
+              setProfileOpen((value) => !value)
+            }
             aria-expanded={profileOpen}
             aria-haspopup="true"
           >
-            <div className="df-avatar">{currentUser.initials}</div>
+            <div className="df-avatar">
+              {currentUser.initials}
+            </div>
 
             <div className="df-profile-copy">
               <strong>{currentUser.name}</strong>
@@ -176,13 +232,35 @@ function handleSelectResult(label: string) {
           {profileOpen && (
             <div className="df-profile-dropdown">
               <strong>{currentUser.name}</strong>
+
               <span>{currentUser.role}</span>
 
-              <button type="button" onClick={() => { setProfileOpen(false); onNavigate("profile"); }}>View profile</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setProfileOpen(false);
+                  onNavigate("profile");
+                }}
+              >
+                View profile
+              </button>
 
-              <button type="button" onClick={() => { setProfileOpen(false); onNavigate("settings"); }}>Preferences</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setProfileOpen(false);
+                  onNavigate("settings");
+                }}
+              >
+                Preferences
+              </button>
 
-              <button type="button" onClick={() => setProfileOpen(false)}>Sign out</button>
+              <button
+                type="button"
+                onClick={() => setProfileOpen(false)}
+              >
+                Sign out
+              </button>
             </div>
           )}
         </div>
