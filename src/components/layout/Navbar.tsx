@@ -36,6 +36,7 @@ export function Navbar({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchWrapRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
 
@@ -121,7 +122,10 @@ export function Navbar({
         <DevFlowLogo />
       </div>
 
-      <div className="df-search-wrap">
+      <div
+  className="df-search-wrap"
+  ref={searchWrapRef}
+>
         <div className="df-search">
           <span aria-hidden="true">⌕</span>
 
@@ -132,12 +136,20 @@ export function Navbar({
               onSearchChange(event.target.value)
             }
             onFocus={() => setPaletteOpen(true)}
-            onBlur={() =>
-              window.setTimeout(
-                () => setPaletteOpen(false),
-                120
-              )
-            }
+            onBlur={(event) => {
+  if (
+    searchWrapRef.current?.contains(
+      event.relatedTarget as Node
+    )
+  ) {
+    return;
+  }
+
+  window.setTimeout(
+    () => setPaletteOpen(false),
+    120
+  );
+}}
             onKeyDown={(event) => {
               if (event.key === "Escape") {
                 handleEscape();
@@ -252,7 +264,7 @@ export function Navbar({
                   onNavigate("settings");
                 }}
               >
-                Preferences
+                Settings
               </button>
 
               <button

@@ -53,9 +53,7 @@ export function CommandPalette({
                 key={item.id}
                 className="df-command-item"
                 role="option"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-
+                onClick={() => {
                   if (relatedTask) {
                     onSelectResult(
                       "task",
@@ -113,9 +111,7 @@ export function CommandPalette({
                 key={task.id}
                 className="df-command-item"
                 role="option"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-
+                onClick={() => {
                   onSelectResult(
                     "task",
                     task.id,
@@ -146,9 +142,7 @@ export function CommandPalette({
               key={project.id}
               className="df-command-item"
               role="option"
-              onMouseDown={(e) => {
-                e.preventDefault();
-
+              onClick={() => {
                 onSelectResult(
                   "project",
                   project.id,
@@ -178,9 +172,7 @@ export function CommandPalette({
               key={person.id}
               className="df-command-item"
               role="option"
-              onMouseDown={(e) => {
-                e.preventDefault();
-
+              onClick={() => {
                 onSelectResult(
                   "person",
                   person.id,
