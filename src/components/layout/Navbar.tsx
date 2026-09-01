@@ -73,13 +73,18 @@ export function Navbar({
     inputRef.current?.blur();
   }
 
-  function handleSelectResult(label: string) {
-    onSearchChange(label);
-    setPaletteOpen(false);
-    onNavigateToResult();
-    inputRef.current?.blur();
-  }
+function handleSelectResult(label: string) {
+  onSearchChange(label);
+  setPaletteOpen(false);
+  onNavigateToResult();
+  inputRef.current?.blur();
 
+  window.setTimeout(() => {
+    document
+      .getElementById("today-flow-map")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 100);
+}
   return (
     <header className="df-navbar">
       <div className="df-mobile-brand">
