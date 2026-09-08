@@ -1,0 +1,460 @@
+openapi: 3.0.3
+info:
+  title: DevFlow Backend API
+  description: Task 2 REST API for the DevFlow productivity platform (in-memory data source).
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000
+
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  data:
+                    type: object
+                    properties:
+                      status: { type: string, example: ok }
+
+  /api/users:
+    get:
+      summary: List users
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserCollection"
+    post:
+      summary: Create a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/users/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      summary: Get user by id
+      responses:
+        "200":
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Update user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "200":
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete user
+      responses:
+        "204":
+          description: User deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/projects:
+    get:
+      summary: List projects
+      responses:
+        "200":
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectCollection"
+    post:
+      summary: Create a project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectInput"
+      responses:
+        "201":
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          description: Owner not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error: { code: OWNER_NOT_FOUND, message: "Owner not found: <id>" }
+
+  /api/projects/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      summary: Get project by id
+      responses:
+        "200":
+          description: Project found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Update project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectInput"
+      responses:
+        "200":
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          description: Project or owner not found (code NOT_FOUND or OWNER_NOT_FOUND)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Delete project
+      responses:
+        "204":
+          description: Project deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/tasks:
+    get:
+      summary: List tasks (with optional filters, combinable)
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/TaskStatus" }
+        - name: priority
+          in: query
+          schema: { $ref: "#/components/schemas/TaskPriority" }
+        - name: projectId
+          in: query
+          schema: { type: string }
+        - name: assigneeId
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          description: Case-insensitive match against title/description
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of tasks (empty array if no matches)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskCollection"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+    post:
+      summary: Create a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          description: Project or assignee not found (code PROJECT_NOT_FOUND or ASSIGNEE_NOT_FOUND)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/tasks/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      summary: Get task by id
+      responses:
+        "200":
+          description: Task found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Update task (full payload)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "200":
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          description: Task, project, or assignee not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Delete task
+      responses:
+        "204":
+          description: Task deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/tasks/{id}/status:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    patch:
+      summary: Update only the task status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: "#/components/schemas/TaskStatus" }
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+
+  responses:
+    ValidationError:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            error:
+              code: VALIDATION_ERROR
+              message: Validation failed
+              details: [{ path: name, message: "name is required" }]
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            error: { code: NOT_FOUND, message: "Resource not found: <id>" }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: { type: array, items: {} }
+
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        role: { type: string }
+        initials: { type: string }
+        activeTasks: { type: integer, minimum: 0 }
+    UserInput:
+      type: object
+      required: [name, role, initials, activeTasks]
+      properties:
+        name: { type: string, minLength: 1 }
+        role: { type: string, minLength: 1 }
+        initials: { type: string, minLength: 1 }
+        activeTasks: { type: integer, minimum: 0 }
+    UserResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        data: { $ref: "#/components/schemas/User" }
+    UserCollection:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/User" }
+        meta:
+          type: object
+          properties: { count: { type: integer } }
+
+    Project:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        ownerId: { type: string, description: "Must reference an existing user id" }
+        color: { type: string }
+        health: { $ref: "#/components/schemas/ProjectHealth" }
+    ProjectHealth:
+      type: string
+      enum: [healthy, at-risk, blocked]
+    ProjectInput:
+      type: object
+      required: [name, description, ownerId, color, health]
+      properties:
+        name: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+        ownerId: { type: string, minLength: 1 }
+        color: { type: string, minLength: 1 }
+        health: { $ref: "#/components/schemas/ProjectHealth" }
+    ProjectResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        data: { $ref: "#/components/schemas/Project" }
+    ProjectCollection:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Project" }
+        meta:
+          type: object
+          properties: { count: { type: integer } }
+
+    TaskStatus:
+      type: string
+      enum: [todo, in-progress, blocked, done]
+    TaskPriority:
+      type: string
+      enum: [high, medium, low]
+    Task:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string }
+        projectId: { type: string, description: "Must reference an existing project id" }
+        assigneeId: { type: string, description: "Must reference an existing user id" }
+        status: { $ref: "#/components/schemas/TaskStatus" }
+        priority: { $ref: "#/components/schemas/TaskPriority" }
+        dueDate: { type: string, example: "2026-09-20" }
+        estimatedHours: { type: number, minimum: 0 }
+        blocking: { type: boolean }
+    TaskInput:
+      type: object
+      required: [title, description, projectId, assigneeId, status, priority, dueDate, estimatedHours, blocking]
+      properties:
+        title: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+        projectId: { type: string, minLength: 1 }
+        assigneeId: { type: string, minLength: 1 }
+        status: { $ref: "#/components/schemas/TaskStatus" }
+        priority: { $ref: "#/components/schemas/TaskPriority" }
+        dueDate: { type: string, minLength: 1 }
+        estimatedHours: { type: number, minimum: 0 }
+        blocking: { type: boolean }
+    TaskResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        data: { $ref: "#/components/schemas/Task" }
+    TaskCollection:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Task" }
+        meta:
+          type: object
+          properties: { count: { type: integer } }
