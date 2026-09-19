@@ -7,7 +7,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "tsx --test tests/api.test.ts",
-    "seed": "tsx src/seed.ts"
+    "seed": "tsx src/seed.ts",
+    "postinstall": "prisma generate"
   },
   "type": "module",
   "keywords": [],
