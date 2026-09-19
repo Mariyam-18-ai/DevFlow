@@ -1,63 +1,160 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { taskService } from "../services/taskService.js";
-import { taskInputSchema, taskStatusSchema, taskFilterSchema } from "../schemas/taskSchema.js";
+import {
+  taskInputSchema,
+  taskStatusSchema,
+  taskFilterSchema,
+} from "../schemas/taskSchema.js";
+import { AppError } from "../types/index.js";
 
 export const taskController = {
-  getAll(req: Request, res: Response, next: NextFunction): void {
+  async getAll(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
-      const filter = taskFilterSchema.parse(req.query);
-      const tasks = taskService.getAll(filter);
-      res.status(200).json({ success: true, data: tasks, meta: { count: tasks.length } });
-    } catch (err) {
-      next(err);
+      const result = taskFilterSchema.safeParse(req.query);
+
+      if (!result.success) {
+        throw new AppError(
+          "Invalid task filters",
+          400,
+          "VALIDATION_ERROR"
+        );
+      }
+
+      const tasks = await taskService.getAll(result.data);
+
+      res.status(200).json({
+        success: true,
+        data: tasks,
+        meta: { count: tasks.length },
+      });
+    } catch (error) {
+      next(error);
     }
   },
 
-  getById(req: Request, res: Response, next: NextFunction): void {
+  async getById(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
-      const task = taskService.getById(req.params.id as string);
-      res.status(200).json({ success: true, data: task });
-    } catch (err) {
-      next(err);
+      const task = await taskService.getById(
+        String(req.params.id)
+      );
+
+      res.status(200).json({
+        success: true,
+        data: task,
+      });
+    } catch (error) {
+      next(error);
     }
   },
 
-  create(req: Request, res: Response, next: NextFunction): void {
+  async create(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
-      const input = taskInputSchema.parse(req.body);
-      const task = taskService.create(input);
-      res.status(201).json({ success: true, data: task });
-    } catch (err) {
-      next(err);
+      const result = taskInputSchema.safeParse(req.body);
+
+      if (!result.success) {
+        throw new AppError(
+          "Invalid task data",
+          400,
+          "VALIDATION_ERROR"
+        );
+      }
+
+      const task = await taskService.create(result.data);
+
+      res.status(201).json({
+        success: true,
+        data: task,
+      });
+    } catch (error) {
+      next(error);
     }
   },
 
-  update(req: Request, res: Response, next: NextFunction): void {
+  async update(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
-      const input = taskInputSchema.parse(req.body);
-      const task = taskService.update(req.params.id as string, input);
-      res.status(200).json({ success: true, data: task });
-    } catch (err) {
-      next(err);
+      const result = taskInputSchema.safeParse(req.body);
+
+      if (!result.success) {
+        throw new AppError(
+          "Invalid task data",
+          400,
+          "VALIDATION_ERROR"
+        );
+      }
+
+      const task = await taskService.update(
+        String(req.params.id),
+        result.data
+      );
+
+      res.status(200).json({
+        success: true,
+        data: task,
+      });
+    } catch (error) {
+      next(error);
     }
   },
 
-  updateStatus(req: Request, res: Response, next: NextFunction): void {
+  async updateStatus(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
-      const { status } = taskStatusSchema.parse(req.body);
-      const task = taskService.updateStatus(req.params.id as string, status);
-      res.status(200).json({ success: true, data: task });
-    } catch (err) {
-      next(err);
+      const result = taskStatusSchema.safeParse(req.body);
+
+      if (!result.success) {
+        throw new AppError(
+          "Invalid task status",
+          400,
+          "VALIDATION_ERROR"
+        );
+      }
+
+      const task = await taskService.updateStatus(
+        String(req.params.id),
+        result.data.status
+      );
+
+      res.status(200).json({
+        success: true,
+        data: task,
+      });
+    } catch (error) {
+      next(error);
     }
   },
 
-  delete(req: Request, res: Response, next: NextFunction): void {
+  async delete(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
-      taskService.delete(req.params.id as string);
+      await taskService.delete(
+        String(req.params.id)
+      );
+
       res.status(204).send();
-    } catch (err) {
-      next(err);
+    } catch (error) {
+      next(error);
     }
   },
 };

@@ -1,44 +1,76 @@
 import { AppError, Project } from "../types/index.js";
-import { projectRepository, CreateProjectInput, UpdateProjectInput } from "../repositories/projectRepository.js";
+import {
+  projectRepository,
+  CreateProjectInput,
+  UpdateProjectInput,
+} from "../repositories/projectRepository.js";
 import { userRepository } from "../repositories/userRepository.js";
 
-function assertOwnerExists(ownerId: string): void {
-  if (!userRepository.findById(ownerId)) {
-    throw new AppError(`Owner not found: ${ownerId}`, 404, "OWNER_NOT_FOUND");
+async function assertOwnerExists(ownerId: string): Promise<void> {
+  const owner = await userRepository.findById(ownerId);
+
+  if (!owner) {
+    throw new AppError(
+      `Owner not found: ${ownerId}`,
+      404,
+      "OWNER_NOT_FOUND"
+    );
   }
 }
 
 export const projectService = {
-  getAll(): Project[] {
-    return projectRepository.findAll();
+  async getAll(): Promise<Project[]> {
+    return await projectRepository.findAll();
   },
 
-  getById(id: string): Project {
-    const project = projectRepository.findById(id);
+  async getById(id: string): Promise<Project> {
+    const project = await projectRepository.findById(id);
+
     if (!project) {
-      throw new AppError(`Project not found: ${id}`, 404, "NOT_FOUND");
+      throw new AppError(
+        `Project not found: ${id}`,
+        404,
+        "NOT_FOUND"
+      );
     }
+
     return project;
   },
 
-  create(input: CreateProjectInput): Project {
-    assertOwnerExists(input.ownerId);
-    return projectRepository.create(input);
+  async create(input: CreateProjectInput): Promise<Project> {
+    await assertOwnerExists(input.ownerId);
+
+    return await projectRepository.create(input);
   },
 
-  update(id: string, input: UpdateProjectInput): Project {
-    assertOwnerExists(input.ownerId);
-    const updated = projectRepository.update(id, input);
+  async update(
+    id: string,
+    input: UpdateProjectInput
+  ): Promise<Project> {
+    await assertOwnerExists(input.ownerId);
+
+    const updated = await projectRepository.update(id, input);
+
     if (!updated) {
-      throw new AppError(`Project not found: ${id}`, 404, "NOT_FOUND");
+      throw new AppError(
+        `Project not found: ${id}`,
+        404,
+        "NOT_FOUND"
+      );
     }
+
     return updated;
   },
 
-  delete(id: string): void {
-    const deleted = projectRepository.delete(id);
+  async delete(id: string): Promise<void> {
+    const deleted = await projectRepository.delete(id);
+
     if (!deleted) {
-      throw new AppError(`Project not found: ${id}`, 404, "NOT_FOUND");
+      throw new AppError(
+        `Project not found: ${id}`,
+        404,
+        "NOT_FOUND"
+      );
     }
   },
 };

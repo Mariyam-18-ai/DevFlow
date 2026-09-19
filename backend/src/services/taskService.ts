@@ -1,61 +1,109 @@
 import { AppError, Task } from "../types/index.js";
-import { taskRepository, CreateTaskInput, UpdateTaskInput, TaskFilter } from "../repositories/taskRepository.js";
+import {
+  taskRepository,
+  CreateTaskInput,
+  UpdateTaskInput,
+  TaskFilter,
+} from "../repositories/taskRepository.js";
 import { userRepository } from "../repositories/userRepository.js";
 import { projectRepository } from "../repositories/projectRepository.js";
 
-function assertProjectExists(projectId: string): void {
-  if (!projectRepository.findById(projectId)) {
-    throw new AppError(`Project not found: ${projectId}`, 404, "PROJECT_NOT_FOUND");
+async function assertProjectExists(projectId: string): Promise<void> {
+  const project = await projectRepository.findById(projectId);
+
+  if (!project) {
+    throw new AppError(
+      `Project not found: ${projectId}`,
+      404,
+      "PROJECT_NOT_FOUND"
+    );
   }
 }
 
-function assertAssigneeExists(assigneeId: string): void {
-  if (!userRepository.findById(assigneeId)) {
-    throw new AppError(`Assignee not found: ${assigneeId}`, 404, "ASSIGNEE_NOT_FOUND");
+async function assertAssigneeExists(assigneeId: string): Promise<void> {
+  const assignee = await userRepository.findById(assigneeId);
+
+  if (!assignee) {
+    throw new AppError(
+      `Assignee not found: ${assigneeId}`,
+      404,
+      "ASSIGNEE_NOT_FOUND"
+    );
   }
 }
 
 export const taskService = {
-  getAll(filter?: TaskFilter): Task[] {
-    return taskRepository.findAll(filter);
+  async getAll(filter?: TaskFilter): Promise<Task[]> {
+    return await taskRepository.findAll(filter);
   },
 
-  getById(id: string): Task {
-    const task = taskRepository.findById(id);
+  async getById(id: string): Promise<Task> {
+    const task = await taskRepository.findById(id);
+
     if (!task) {
-      throw new AppError(`Task not found: ${id}`, 404, "NOT_FOUND");
+      throw new AppError(
+        `Task not found: ${id}`,
+        404,
+        "NOT_FOUND"
+      );
     }
+
     return task;
   },
 
-  create(input: CreateTaskInput): Task {
-    assertProjectExists(input.projectId);
-    assertAssigneeExists(input.assigneeId);
-    return taskRepository.create(input);
+  async create(input: CreateTaskInput): Promise<Task> {
+    await assertProjectExists(input.projectId);
+    await assertAssigneeExists(input.assigneeId);
+
+    return await taskRepository.create(input);
   },
 
-  update(id: string, input: UpdateTaskInput): Task {
-    assertProjectExists(input.projectId);
-    assertAssigneeExists(input.assigneeId);
-    const updated = taskRepository.update(id, input);
+  async update(
+    id: string,
+    input: UpdateTaskInput
+  ): Promise<Task> {
+    await assertProjectExists(input.projectId);
+    await assertAssigneeExists(input.assigneeId);
+
+    const updated = await taskRepository.update(id, input);
+
     if (!updated) {
-      throw new AppError(`Task not found: ${id}`, 404, "NOT_FOUND");
+      throw new AppError(
+        `Task not found: ${id}`,
+        404,
+        "NOT_FOUND"
+      );
     }
+
     return updated;
   },
 
-  updateStatus(id: string, status: Task["status"]): Task {
-    const updated = taskRepository.updateStatus(id, status);
+  async updateStatus(
+    id: string,
+    status: Task["status"]
+  ): Promise<Task> {
+    const updated = await taskRepository.updateStatus(id, status);
+
     if (!updated) {
-      throw new AppError(`Task not found: ${id}`, 404, "NOT_FOUND");
+      throw new AppError(
+        `Task not found: ${id}`,
+        404,
+        "NOT_FOUND"
+      );
     }
+
     return updated;
   },
 
-  delete(id: string): void {
-    const deleted = taskRepository.delete(id);
+  async delete(id: string): Promise<void> {
+    const deleted = await taskRepository.delete(id);
+
     if (!deleted) {
-      throw new AppError(`Task not found: ${id}`, 404, "NOT_FOUND");
+      throw new AppError(
+        `Task not found: ${id}`,
+        404,
+        "NOT_FOUND"
+      );
     }
   },
 };

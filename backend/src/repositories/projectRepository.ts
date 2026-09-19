@@ -1,58 +1,108 @@
-import { randomUUID } from "crypto";
-import { Project } from "../types/index.js";
-import { userRepository } from "./userRepository.js";
+import { AppError, Project } from "../types/index.js";
+import { prisma } from "../lib/prisma.js";
 
 export type CreateProjectInput = Omit<Project, "id">;
 export type UpdateProjectInput = Omit<Project, "id">;
 
-const ownerIds = userRepository.findAll().map((u) => u.id);
+function toProject(project: {
+  id: string;
+  name: string;
+  description: string;
+  ownerId: string;
+  color: string;
+  health: "healthy" | "at_risk" | "blocked";
+}): Project {
+  return {
+    id: project.id,
+    name: project.name,
+    description: project.description,
+    ownerId: project.ownerId,
+    color: project.color,
+    health: project.health === "at_risk" ? "at-risk" : project.health,
+  };
+}
 
-const projects: Project[] = [
-  {
-    id: randomUUID(),
-    name: "DevFlow Platform",
-    description: "Internal task and project tracking tool",
-    ownerId: ownerIds[0]!,
-    color: "#4F46E5",
-    health: "healthy",
-  },
-  {
-    id: randomUUID(),
-    name: "API Migration",
-    description: "Migrate legacy endpoints to the new backend",
-    ownerId: ownerIds[1]!,
-    color: "#F59E0B",
-    health: "at-risk",
-  },
-];
+function toDatabaseHealth(
+  health: Project["health"]
+): "healthy" | "at_risk" | "blocked" {
+  return health === "at-risk" ? "at_risk" : health;
+}
 
 export const projectRepository = {
-  findAll(): Project[] {
-    return projects;
+  async findAll(): Promise<Project[]> {
+    const projects = await prisma.project.findMany({
+      orderBy: { createdAt: "asc" },
+    });
+
+    return projects.map(toProject);
   },
 
-  findById(id: string): Project | undefined {
-    return projects.find((p) => p.id === id);
+  async findById(id: string): Promise<Project | undefined> {
+    const project = await prisma.project.findUnique({
+      where: { id },
+    });
+
+    return project ? toProject(project) : undefined;
   },
 
-  create(input: CreateProjectInput): Project {
-    const project: Project = { id: randomUUID(), ...input };
-    projects.push(project);
-    return project;
+  async create(input: CreateProjectInput): Promise<Project> {
+    const project = await prisma.project.create({
+      data: {
+        ...input,
+        health: toDatabaseHealth(input.health),
+      },
+    });
+
+    return toProject(project);
   },
 
-  update(id: string, input: UpdateProjectInput): Project | undefined {
-    const index = projects.findIndex((p) => p.id === id);
-    if (index === -1) return undefined;
-    const updated: Project = { id, ...input };
-    projects[index] = updated;
-    return updated;
+  async update(
+    id: string,
+    input: UpdateProjectInput
+  ): Promise<Project | undefined> {
+    const existing = await prisma.project.findUnique({
+      where: { id },
+    });
+
+    if (!existing) return undefined;
+
+    const project = await prisma.project.update({
+      where: { id },
+      data: {
+        ...input,
+        health: toDatabaseHealth(input.health),
+      },
+    });
+
+    return toProject(project);
   },
 
-  delete(id: string): boolean {
-    const index = projects.findIndex((p) => p.id === id);
-    if (index === -1) return false;
-    projects.splice(index, 1);
+  async delete(id: string): Promise<boolean> {
+    const existing = await prisma.project.findUnique({
+      where: { id },
+    });
+
+    if (!existing) return false;
+
+    try {
+      await prisma.project.delete({
+        where: { id },
+      });
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.includes("Foreign key constraint")
+      ) {
+        throw new AppError(
+          "Project cannot be deleted because it still has tasks.",
+          409,
+          "PROJECT_HAS_DEPENDENCIES"
+        );
+      }
+
+      throw error;
+    }
+
     return true;
   },
 };

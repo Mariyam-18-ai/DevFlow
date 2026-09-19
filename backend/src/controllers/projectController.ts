@@ -1,52 +1,116 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { projectService } from "../services/projectService.js";
 import { projectInputSchema } from "../schemas/projectSchema.js";
+import { AppError } from "../types/index.js";
 
 export const projectController = {
-  getAll(_req: Request, res: Response, next: NextFunction): void {
+  async getAll(
+    _req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
-      const projects = projectService.getAll();
-      res.status(200).json({ success: true, data: projects, meta: { count: projects.length } });
-    } catch (err) {
-      next(err);
+      const projects = await projectService.getAll();
+
+      res.status(200).json({
+        success: true,
+        data: projects,
+        meta: { count: projects.length },
+      });
+    } catch (error) {
+      next(error);
     }
   },
 
-  getById(req: Request, res: Response, next: NextFunction): void {
+  async getById(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
-      const project = projectService.getById(req.params.id as string);
-      res.status(200).json({ success: true, data: project });
-    } catch (err) {
-      next(err);
+      const project = await projectService.getById(
+        String(req.params.id)
+      );
+
+      res.status(200).json({
+        success: true,
+        data: project,
+      });
+    } catch (error) {
+      next(error);
     }
   },
 
-  create(req: Request, res: Response, next: NextFunction): void {
+  async create(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
-      const input = projectInputSchema.parse(req.body);
-      const project = projectService.create(input);
-      res.status(201).json({ success: true, data: project });
-    } catch (err) {
-      next(err);
+      const result = projectInputSchema.safeParse(req.body);
+
+      if (!result.success) {
+        throw new AppError(
+          "Invalid project data",
+          400,
+          "VALIDATION_ERROR"
+        );
+      }
+
+      const project = await projectService.create(result.data);
+
+      res.status(201).json({
+        success: true,
+        data: project,
+      });
+    } catch (error) {
+      next(error);
     }
   },
 
-  update(req: Request, res: Response, next: NextFunction): void {
+  async update(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
-      const input = projectInputSchema.parse(req.body);
-      const project = projectService.update(req.params.id as string, input);
-      res.status(200).json({ success: true, data: project });
-    } catch (err) {
-      next(err);
+      const result = projectInputSchema.safeParse(req.body);
+
+      if (!result.success) {
+        throw new AppError(
+          "Invalid project data",
+          400,
+          "VALIDATION_ERROR"
+        );
+      }
+
+      const project = await projectService.update(
+        String(req.params.id),
+        result.data
+      );
+
+      res.status(200).json({
+        success: true,
+        data: project,
+      });
+    } catch (error) {
+      next(error);
     }
   },
 
-  delete(req: Request, res: Response, next: NextFunction): void {
+  async delete(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
-      projectService.delete(req.params.id as string);
+      await projectService.delete(
+        String(req.params.id)
+      );
+
       res.status(204).send();
-    } catch (err) {
-      next(err);
+    } catch (error) {
+      next(error);
     }
   },
 };

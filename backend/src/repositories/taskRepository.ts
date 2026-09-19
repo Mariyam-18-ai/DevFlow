@@ -1,7 +1,5 @@
-import { randomUUID } from "crypto";
 import { Task } from "../types/index.js";
-import { userRepository } from "./userRepository.js";
-import { projectRepository } from "./projectRepository.js";
+import { prisma } from "../lib/prisma.js";
 
 export type CreateTaskInput = Omit<Task, "id">;
 export type UpdateTaskInput = Omit<Task, "id">;
@@ -14,119 +12,158 @@ export interface TaskFilter {
   search?: string;
 }
 
-const projectIds = projectRepository.findAll().map((p) => p.id);
-const userIds = userRepository.findAll().map((u) => u.id);
+function toDatabaseStatus(
+  status: Task["status"]
+): "todo" | "in_progress" | "blocked" | "done" {
+  return status === "in-progress" ? "in_progress" : status;
+}
 
-const tasks: Task[] = [
-  {
-    id: randomUUID(),
-    title: "Design login screen",
-    description: "Create wireframes and high-fidelity mockups for login",
-    projectId: projectIds[0]!,
-    assigneeId: userIds[0]!,
-    status: "todo",
-    priority: "medium",
-    dueDate: "2026-09-20",
-    estimatedHours: 6,
-    blocking: false,
-  },
-  {
-    id: randomUUID(),
-    title: "Build auth API",
-    description: "Implement backend authentication endpoints",
-    projectId: projectIds[1]!,
-    assigneeId: userIds[1]!,
-    status: "in-progress",
-    priority: "high",
-    dueDate: "2026-09-15",
-    estimatedHours: 12,
-    blocking: true,
-  },
-  {
-    id: randomUUID(),
-    title: "Write API documentation",
-    description: "Document all REST endpoints for the DevFlow backend",
-    projectId: projectIds[1]!,
-    assigneeId: userIds[2]!,
-    status: "todo",
-    priority: "low",
-    dueDate: "2026-09-25",
-    estimatedHours: 4,
-    blocking: false,
-  },
-  {
-    id: randomUUID(),
-    title: "Fix dashboard rendering bug",
-    description: "Resolve layout issue on the project dashboard",
-    projectId: projectIds[0]!,
-    assigneeId: userIds[1]!,
-    status: "blocked",
-    priority: "high",
-    dueDate: "2026-09-12",
-    estimatedHours: 3,
-    blocking: true,
-  },
-  {
-    id: randomUUID(),
-    title: "Set up CI pipeline",
-    description: "Configure automated build and test pipeline",
-    projectId: projectIds[0]!,
-    assigneeId: userIds[2]!,
-    status: "done",
-    priority: "medium",
-    dueDate: "2026-09-01",
-    estimatedHours: 8,
-    blocking: false,
-  },
-];
+function toTask(task: {
+  id: string;
+  title: string;
+  description: string;
+  projectId: string;
+  assigneeId: string;
+  status: "todo" | "in_progress" | "blocked" | "done";
+  priority: "high" | "medium" | "low";
+  dueDate: Date;
+  estimatedHours: number;
+  blocking: boolean;
+}): Task {
+  return {
+    id: task.id,
+    title: task.title,
+    description: task.description,
+    projectId: task.projectId,
+    assigneeId: task.assigneeId,
+    status: task.status === "in_progress" ? "in-progress" : task.status,
+    priority: task.priority,
+    dueDate: task.dueDate.toISOString().split("T")[0]!,
+    estimatedHours: task.estimatedHours,
+    blocking: task.blocking,
+  };
+}
 
 export const taskRepository = {
-  findAll(filter?: TaskFilter): Task[] {
-    if (!filter) return tasks;
-    return tasks.filter((t) => {
-      if (filter.status && t.status !== filter.status) return false;
-      if (filter.priority && t.priority !== filter.priority) return false;
-      if (filter.projectId && t.projectId !== filter.projectId) return false;
-      if (filter.assigneeId && t.assigneeId !== filter.assigneeId) return false;
-      if (filter.search) {
-        const q = filter.search.toLowerCase();
-        if (!t.title.toLowerCase().includes(q) && !t.description.toLowerCase().includes(q)) {
-          return false;
-        }
-      }
-      return true;
+  async findAll(filter?: TaskFilter): Promise<Task[]> {
+    const tasks = await prisma.task.findMany({
+      where: {
+        ...(filter?.status
+          ? { status: toDatabaseStatus(filter.status) }
+          : {}),
+        ...(filter?.priority ? { priority: filter.priority } : {}),
+        ...(filter?.projectId ? { projectId: filter.projectId } : {}),
+        ...(filter?.assigneeId ? { assigneeId: filter.assigneeId } : {}),
+        ...(filter?.search
+          ? {
+              OR: [
+                {
+                  title: {
+                    contains: filter.search,
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  description: {
+                    contains: filter.search,
+                    mode: "insensitive",
+                  },
+                },
+              ],
+            }
+          : {}),
+      },
+      orderBy: { createdAt: "asc" },
     });
+
+    return tasks.map(toTask);
   },
 
-  findById(id: string): Task | undefined {
-    return tasks.find((t) => t.id === id);
+  async findById(id: string): Promise<Task | undefined> {
+    const task = await prisma.task.findUnique({
+      where: { id },
+    });
+
+    return task ? toTask(task) : undefined;
   },
 
-  create(input: CreateTaskInput): Task {
-    const task: Task = { id: randomUUID(), ...input };
-    tasks.push(task);
-    return task;
+  async create(input: CreateTaskInput): Promise<Task> {
+    const task = await prisma.task.create({
+      data: {
+        title: input.title,
+        description: input.description,
+        projectId: input.projectId,
+        assigneeId: input.assigneeId,
+        status: toDatabaseStatus(input.status),
+        priority: input.priority,
+        dueDate: new Date(input.dueDate),
+        estimatedHours: input.estimatedHours,
+        blocking: input.blocking,
+      },
+    });
+
+    return toTask(task);
   },
 
-  update(id: string, input: UpdateTaskInput): Task | undefined {
-    const index = tasks.findIndex((t) => t.id === id);
-    if (index === -1) return undefined;
-    const updated: Task = { id, ...input };
-    tasks[index] = updated;
-    return updated;
+  async update(
+    id: string,
+    input: UpdateTaskInput
+  ): Promise<Task | undefined> {
+    const existing = await prisma.task.findUnique({
+      where: { id },
+    });
+
+    if (!existing) return undefined;
+
+    const task = await prisma.task.update({
+      where: { id },
+      data: {
+        title: input.title,
+        description: input.description,
+        projectId: input.projectId,
+        assigneeId: input.assigneeId,
+        status: toDatabaseStatus(input.status),
+        priority: input.priority,
+        dueDate: new Date(input.dueDate),
+        estimatedHours: input.estimatedHours,
+        blocking: input.blocking,
+      },
+    });
+
+    return toTask(task);
   },
 
-  updateStatus(id: string, status: Task["status"]): Task | undefined {
-    const index = tasks.findIndex((t) => t.id === id);
-    if (index === -1) return undefined;
-    tasks[index] = { ...tasks[index]!, status };
-    return tasks[index];
+  async updateStatus(
+    id: string,
+    status: Task["status"]
+  ): Promise<Task | undefined> {
+    const existing = await prisma.task.findUnique({
+      where: { id },
+    });
+
+    if (!existing) return undefined;
+
+    const task = await prisma.task.update({
+      where: { id },
+      data: {
+        status: toDatabaseStatus(status),
+      },
+    });
+
+    return toTask(task);
   },
 
-  delete(id: string): boolean {
-    const index = tasks.findIndex((t) => t.id === id);
-    if (index === -1) return false;
-    tasks.splice(index, 1);
+  async delete(id: string): Promise<boolean> {
+    const existing = await prisma.task.findUnique({
+      where: { id },
+    });
+
+    if (!existing) return false;
+
+    await prisma.task.delete({
+      where: { id },
+    });
+
     return true;
   },
 };

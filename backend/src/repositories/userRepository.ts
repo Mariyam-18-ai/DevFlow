@@ -1,42 +1,93 @@
-import { randomUUID } from "crypto";
-import { User } from "../types/index.js";
+import { AppError, User } from "../types/index.js";
+import { prisma } from "../lib/prisma.js";
 
 export type CreateUserInput = Omit<User, "id">;
 export type UpdateUserInput = Omit<User, "id">;
 
-const users: User[] = [
-  { id: randomUUID(), name: "Ava Patel", role: "Frontend Engineer", initials: "AP", activeTasks: 3 },
-  { id: randomUUID(), name: "Liam Chen", role: "Backend Engineer", initials: "LC", activeTasks: 5 },
-  { id: randomUUID(), name: "Sofia Ramirez", role: "Product Manager", initials: "SR", activeTasks: 2 },
-];
+function toUser(user: {
+  id: string;
+  name: string;
+  role: string;
+  initials: string;
+  activeTasks: number;
+}): User {
+  return {
+    id: user.id,
+    name: user.name,
+    role: user.role,
+    initials: user.initials,
+    activeTasks: user.activeTasks,
+  };
+}
 
 export const userRepository = {
-  findAll(): User[] {
-    return users;
+  async findAll(): Promise<User[]> {
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: "asc" },
+    });
+
+    return users.map(toUser);
   },
 
-  findById(id: string): User | undefined {
-    return users.find((u) => u.id === id);
+  async findById(id: string): Promise<User | undefined> {
+    const user = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    return user ? toUser(user) : undefined;
   },
 
-  create(input: CreateUserInput): User {
-    const user: User = { id: randomUUID(), ...input };
-    users.push(user);
-    return user;
+  async create(input: CreateUserInput): Promise<User> {
+    const user = await prisma.user.create({
+      data: input,
+    });
+
+    return toUser(user);
   },
 
-  update(id: string, input: UpdateUserInput): User | undefined {
-    const index = users.findIndex((u) => u.id === id);
-    if (index === -1) return undefined;
-    const updated: User = { id, ...input };
-    users[index] = updated;
-    return updated;
+  async update(id: string, input: UpdateUserInput): Promise<User | undefined> {
+    const existing = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!existing) return undefined;
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: input,
+    });
+
+    return toUser(user);
   },
 
-  delete(id: string): boolean {
-    const index = users.findIndex((u) => u.id === id);
-    if (index === -1) return false;
-    users.splice(index, 1);
-    return true;
-  },
+  async delete(id: string): Promise<boolean> {
+  const existing = await prisma.user.findUnique({
+    where: { id },
+  });
+
+  if (!existing) {
+    return false;
+  }
+
+  try {
+    await prisma.user.delete({
+      where: { id },
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes("Foreign key constraint")
+    ) {
+      throw new AppError(
+        "User cannot be deleted because it is still referenced by projects or tasks.",
+        409,
+        "USER_HAS_DEPENDENCIES"
+      );
+    }
+
+    throw error;
+  }
+
+  return true;
+},
 };
