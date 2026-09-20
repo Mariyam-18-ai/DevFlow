@@ -1,5 +1,5 @@
+import type { User } from "../../types";
 import { DevFlowLogo } from "./DevFlowLogo";
-import { currentUser } from "../../data/mockUsers";
 import { WORKSPACES } from "../../lib/workspaces";
 
 interface SidebarProps {
@@ -9,6 +9,7 @@ interface SidebarProps {
   onClose: () => void;
   workspace: string;
   onWorkspaceChange: (workspace: string) => void;
+  currentUser: User | null;
 }
 
 const navigation = [
@@ -41,6 +42,7 @@ export function Sidebar({
   onClose,
   workspace,
   onWorkspaceChange,
+  currentUser,
 }: SidebarProps) {
   return (
     <>
@@ -132,12 +134,12 @@ export function Sidebar({
 
           <div className="df-sidebar-user">
             <div className="df-avatar">
-              {currentUser.initials}
+              {currentUser?.initials ?? "—"}
             </div>
 
             <div>
-              <strong>{currentUser.name}</strong>
-              <span>{currentUser.role}</span>
+              <strong>{currentUser?.name ?? "Loading profile"}</strong>
+              <span>{currentUser?.role ?? "Live workspace user"}</span>
             </div>
           </div>
         </div>

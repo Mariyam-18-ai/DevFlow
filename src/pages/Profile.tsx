@@ -1,22 +1,45 @@
 import { PageShell } from "../components/layout/PageShell";
-import { currentUser } from "../data/mockUsers";
-import { mockProjects } from "../data/mockProjects";
-import type { Task } from "../types";
+import type { Project, Task, User } from "../types";
 
 interface ProfileProps {
-  /** Live task state (mirrored from Dashboard via App) so completions
-   * made during the session are reflected here immediately, instead
-   * of reading the static mock snapshot. */
   tasks: Task[];
+  projects: Project[];
+  currentUser: User | null;
 }
 
-export function Profile({ tasks }: ProfileProps) {
-  const completed = tasks.filter((task) => task.assigneeId === currentUser.id && task.status === "done").length;
-  const active = tasks.filter((task) => task.assigneeId === currentUser.id && task.status !== "done").length;
-  const ownedProjects = mockProjects.filter((project) => project.ownerId === currentUser.id).length;
+export function Profile({ tasks, projects, currentUser }: ProfileProps) {
+  if (!currentUser) {
+    return (
+      <PageShell
+        eyebrow="ACCOUNT · PROFILE"
+        title="Profile"
+        description="Your role and current engineering workload."
+      >
+        <section className="df-profile-page-card">
+          <span className="df-eyebrow">LIVE WORKSPACE</span>
+          <h2>Profile unavailable</h2>
+          <p>Live user data is still loading.</p>
+        </section>
+      </PageShell>
+    );
+  }
+
+  const completed = tasks.filter(
+    (task) => task.assigneeId === currentUser.id && task.status === "done"
+  ).length;
+  const active = tasks.filter(
+    (task) => task.assigneeId === currentUser.id && task.status !== "done"
+  ).length;
+  const ownedProjects = projects.filter(
+    (project) => project.ownerId === currentUser.id
+  ).length;
 
   return (
-    <PageShell eyebrow="ACCOUNT · PROFILE" title={currentUser.name} description="Your role and current engineering workload.">
+    <PageShell
+      eyebrow="ACCOUNT · PROFILE"
+      title={currentUser.name}
+      description="Your role and current engineering workload."
+    >
       <section className="df-profile-page-card">
         <div className="df-profile-page-header">
           <div className="df-avatar df-avatar-large">{currentUser.initials}</div>

@@ -143,3 +143,22 @@ test("GET /api/tasks/:id with missing id returns 404", async () => {
   assert.equal(status, 404);
   assert.equal(body.success, false);
 });
+
+
+test("GET /api/users reports active task counts from current task assignments", async () => {
+  const usersRes = await get("/api/users");
+  const tasksRes = await get("/api/tasks");
+
+  for (const user of usersRes.body.data) {
+    const expected = tasksRes.body.data.filter(
+      (task: { assigneeId: string; status: string }) =>
+        task.assigneeId === user.id && task.status !== "done"
+    ).length;
+
+    assert.equal(
+      user.activeTasks,
+      expected,
+      `active task count mismatch for ${user.id}`
+    );
+  }
+});

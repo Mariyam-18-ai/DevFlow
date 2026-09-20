@@ -124,7 +124,7 @@ export function getTodayTasks(
 
   const priorityTasks = activeTasks.filter(
     (task) =>
-      task.dueDate === "Today" ||
+      isDueToday(task.dueDate) ||
       task.priority === "high" ||
       task.status === "in-progress"
   );

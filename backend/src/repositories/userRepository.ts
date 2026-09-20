@@ -26,7 +26,28 @@ export const userRepository = {
       orderBy: { createdAt: "asc" },
     });
 
-    return users.map(toUser);
+    const activeTaskCounts = await Promise.all(
+      users.map(async (user) => ({
+        id: user.id,
+        count: await prisma.task.count({
+          where: {
+            assigneeId: user.id,
+            status: { not: "done" },
+          },
+        }),
+      }))
+    );
+
+    const counts = new Map(
+      activeTaskCounts.map((entry) => [entry.id, entry.count])
+    );
+
+    return users.map((user) =>
+      toUser({
+        ...user,
+        activeTasks: counts.get(user.id) ?? 0,
+      })
+    );
   },
 
   async findById(id: string): Promise<User | undefined> {
@@ -34,7 +55,19 @@ export const userRepository = {
       where: { id },
     });
 
-    return user ? toUser(user) : undefined;
+    if (!user) return undefined;
+
+    const activeTasks = await prisma.task.count({
+      where: {
+        assigneeId: user.id,
+        status: { not: "done" },
+      },
+    });
+
+    return toUser({
+      ...user,
+      activeTasks,
+    });
   },
 
   async create(input: CreateUserInput): Promise<User> {
@@ -42,7 +75,17 @@ export const userRepository = {
       data: input,
     });
 
-    return toUser(user);
+    const activeTasks = await prisma.task.count({
+      where: {
+        assigneeId: user.id,
+        status: { not: "done" },
+      },
+    });
+
+    return toUser({
+      ...user,
+      activeTasks,
+    });
   },
 
   async update(id: string, input: UpdateUserInput): Promise<User | undefined> {
@@ -57,7 +100,17 @@ export const userRepository = {
       data: input,
     });
 
-    return toUser(user);
+    const activeTasks = await prisma.task.count({
+      where: {
+        assigneeId: user.id,
+        status: { not: "done" },
+      },
+    });
+
+    return toUser({
+      ...user,
+      activeTasks,
+    });
   },
 
   async delete(id: string): Promise<boolean> {

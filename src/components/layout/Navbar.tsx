@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import type { Project, Task, User } from "../../types";
-import { currentUser } from "../../data/mockUsers";
 import { DevFlowLogo } from "./DevFlowLogo";
 import { CommandPalette } from "./CommandPalette";
 
@@ -11,6 +10,7 @@ interface NavbarProps {
   tasks: Task[];
   projects: Project[];
   users: User[];
+  currentUser: User | null;
 
   onNavigateToResult: (
     type: "task" | "project" | "person",
@@ -28,6 +28,7 @@ export function Navbar({
   tasks,
   projects,
   users,
+  currentUser,
   onNavigateToResult,
   onNavigate,
 }: NavbarProps) {
@@ -230,12 +231,12 @@ export function Navbar({
             aria-haspopup="true"
           >
             <div className="df-avatar">
-              {currentUser.initials}
+              {currentUser?.initials ?? "—"}
             </div>
 
             <div className="df-profile-copy">
-              <strong>{currentUser.name}</strong>
-              <span>Developer</span>
+              <strong>{currentUser?.name ?? "Loading profile"}</strong>
+              <span>{currentUser?.role ?? "Live workspace user"}</span>
             </div>
 
             <span aria-hidden="true">⌄</span>
@@ -243,9 +244,9 @@ export function Navbar({
 
           {profileOpen && (
             <div className="df-profile-dropdown">
-              <strong>{currentUser.name}</strong>
+              <strong>{currentUser?.name ?? "Profile"}</strong>
 
-              <span>{currentUser.role}</span>
+              <span>{currentUser?.role ?? "Live workspace user"}</span>
 
               <button
                 type="button"

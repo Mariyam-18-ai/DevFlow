@@ -7,7 +7,6 @@ import type {
   User,
 } from "../types";
 import { mockActivity } from "../data/mockActivity";
-import { currentUser } from "../data/mockUsers";
 import { FocusCard } from "../components/dashboard/FocusCard";
 import { FocusRail } from "../components/dashboard/FocusRail";
 import { FlowMap } from "../components/dashboard/FlowMap";
@@ -26,7 +25,7 @@ import { ErrorState } from "../components/ui/ErrorState";
 import { TaskList } from "../components/tasks/TaskList";
 import { searchProjects, searchTasks } from "../lib/search";
 import { getBestNextTask, getTodayTasks } from "../lib/focusScore";
-import { useDashboardData } from "../hooks/useDashboardData";
+import { useDashboardData, type DashboardData } from "../hooks/useDashboardData";
 import { api } from "../lib/api";
 import { ManagementModal } from "../components/ui/ManagementModal";
 import { getLocalDateInputValue, isDueToday } from "../lib/dateUtils";
@@ -43,6 +42,7 @@ interface DashboardProps {
   workspace: string;
   onNavigate: (page: ActivePage) => void;
   onTasksChange?: (tasks: Task[]) => void;
+  onDataChange?: (data: DashboardData) => void;
   searchTarget?: {
     type: "task" | "project" | "person";
     id: string;
@@ -110,6 +110,7 @@ export function Dashboard({
   workspace,
   onNavigate,
   onTasksChange,
+  onDataChange,
   searchTarget,
 }: DashboardProps) {
   const { status, retry, data } = useDashboardData();
@@ -117,6 +118,8 @@ export function Dashboard({
   const [users, setUsers] = useState<User[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+
+  const currentUser = users[0];
 
   const [activity, setActivity] =
     useState<Activity[]>(mockActivity);
@@ -172,25 +175,64 @@ export function Dashboard({
     onTasksChange?.(tasks);
   }, [tasks, onTasksChange]);
 
+  useEffect(() => {
+    if (status !== "success") return;
+
+    onDataChange?.({
+      users,
+      projects,
+      tasks,
+    });
+  }, [status, users, projects, tasks, onDataChange]);
+
   /*
    * Search navigation.
    */
   useEffect(() => {
-    if (searchTarget?.type !== "task") return;
+    if (!searchTarget) return;
 
     const timer = window.setTimeout(() => {
-      setFlowSelectedTaskId(searchTarget.id);
+      if (searchTarget.type === "task") {
+        if (activePage !== "today") {
+          onNavigate("today");
+        }
 
-      document
-        .getElementById("today-flow-map")
-        ?.scrollIntoView({
+        setFlowSelectedTaskId(searchTarget.id);
+        document.getElementById("today-flow-map")?.scrollIntoView({
           behavior: "smooth",
           block: "start",
         });
+        return;
+      }
+
+      if (searchTarget.type === "project") {
+        if (activePage !== "work") {
+          onNavigate("work");
+        }
+
+        setHighlightedProjectId(searchTarget.id);
+        document
+          .getElementById(`project-${searchTarget.id}`)
+          ?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+
+        window.setTimeout(() => {
+          setHighlightedProjectId((current) =>
+            current === searchTarget.id ? null : current
+          );
+        }, 1700);
+        return;
+      }
+
+      if (activePage !== "team") {
+        onNavigate("team");
+      }
     }, 100);
 
     return () => window.clearTimeout(timer);
-  }, [searchTarget]);
+  }, [searchTarget, onNavigate]);
 
   const filteredProjects = useMemo(
     () => searchProjects(projects, searchQuery, tasks),
@@ -247,7 +289,7 @@ export function Dashboard({
     setActivity((current) => [
       {
         id: `local-${activityCounter}`,
-        userId: currentUser.id,
+        userId: currentUser?.id ?? "",
         type,
         message,
         timestamp: "Just now",
@@ -692,17 +734,13 @@ export function Dashboard({
                 Active tasks
                 <input
                   type="number"
-                  min="0"
                   value={userForm.activeTasks}
-                  onChange={(event) =>
-                    setUserForm({
-                      ...userForm,
-                      activeTasks: Number(
-                        event.target.value
-                      ),
-                    })
-                  }
+                  readOnly
+                  aria-describedby="active-tasks-help"
                 />
+                <span id="active-tasks-help" className="df-form-help">
+                  Calculated from the member's current assigned tasks.
+                </span>
               </label>
             </>
           )}
@@ -1025,7 +1063,7 @@ export function Dashboard({
       description={pageCopy?.description}
     >
       <div className="df-dashboard">
-        {activePage === "today" && (
+        {activePage === "today" && currentUser && (
           <TodayHeader
             user={currentUser}
             activeCount={activeCount}
@@ -1177,6 +1215,11 @@ export function Dashboard({
                 users={searchedUsers}
                 tasks={tasks}
                 projects={projects}
+                focusUserId={
+                  searchTarget?.type === "person"
+                    ? searchTarget.id
+                    : null
+                }
                 onInspectTask={
                   handleInspectTask
                 }

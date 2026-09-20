@@ -2615,6 +2615,13 @@ button.df-team-task-row:hover {
   color: var(--df-text-dim);
 }
 
+.df-form-help {
+  margin-top: -2px;
+  color: var(--df-text-dim);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
 .df-crud-form input:focus,
 .df-crud-form textarea:focus,
 .df-crud-form select:focus {

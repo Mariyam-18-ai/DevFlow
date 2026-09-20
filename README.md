@@ -1,6 +1,6 @@
 # DevFlow — Developer Productivity Dashboard
 
-A frontend-only developer productivity workspace built for the Innovation Hacks Full Stack Development Internship.
+A full-stack developer productivity workspace built for the Innovation Hacks Full Stack Development Internship.
 
 ## Concept
 
@@ -31,9 +31,18 @@ Global search (navbar, `⌘K` / `Ctrl+K`) is a command palette that searches tas
 ## Tech stack
 
 - React 19 + Vite + TypeScript
+- Express + TypeScript REST API
+- Prisma 7
+- PostgreSQL
 - Custom CSS (CSS variables for theming, no utility framework)
 
-No backend, database, or auth — all data is mocked in `src/data/`. `useDashboardData()` simulates an async fetch (loading → success, or error with `?forceError=1` in the URL) so every page already renders through real loading/error/success states, ready to be pointed at a real API later without touching any component.
+Task 3 uses a persistent data path:
+
+```text
+React frontend → REST API → Express → Prisma → PostgreSQL
+```
+
+`useDashboardData()` loads users, projects, and tasks from the live API. CRUD mutations use the same API and update the live dashboard state; there is no localStorage/sessionStorage persistence and no mock users/projects/tasks are used by the application.
 
 ## Features implemented
 
@@ -66,15 +75,29 @@ src/
   hooks/        useDashboardData
   lib/          focusScore, projectHealth, filterUtils, search,
                 badgeTone, taskLinks, workload, workspaces
-  data/         mockUsers, mockProjects, mockTasks, mockActivity
+  data/         mockActivity (presentation-only recent activity)
   types/        user, project, task, activity
   pages/        Dashboard.tsx (Today/Work/Team/Insights), Settings.tsx,
                 Profile.tsx
 ```
 
-Business logic (`lib/`) is pure and separate from presentation — badge tone, focus scoring, project health, workload and search all live there once, reused across every page instead of being recomputed per component. `tasks` state is owned in one place (`Dashboard.tsx`) and mirrored up to `App.tsx` only so the navbar's search can see live (post-completion) data; there is no second copy of task state anywhere.
+Business logic (`lib/`) is pure and separate from presentation — badge tone, focus scoring, project health, workload and search all live there once, reused across every page instead of being recomputed per component. Dashboard mutations are mirrored to the app shell so navbar search, profile, and navigation surfaces stay consistent with the live API-backed state.
 
-## Running locally
+## Task 3 backend
+
+The backend exposes CRUD endpoints for users, projects, and tasks, including task status updates. Project health and task status use explicit frontend/API ↔ Prisma enum conversions. Relationship validation prevents tasks from referencing missing projects/users and prevents deletion of users/projects that still have dependent records.
+
+## Local development
+
+Start the backend and frontend separately:
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+In another terminal:
 
 ```bash
 npm install
@@ -84,13 +107,6 @@ npm run dev
 Open http://localhost:5173.
 
 ```bash
-npm run build   # tsc -b && vite build
-npm run lint    # eslint
+npm run build
+npm run lint
 ```
-
-## Roadmap (later tasks)
-
-- Replace mock data with real API calls
-- Auth
-- Persist filters/search/workspace in URL state
-- Real-time activity feed

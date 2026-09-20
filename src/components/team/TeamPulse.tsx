@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Project, Task, User } from "../../types";
 import { Badge } from "../ui/Badge";
 import { EmptyState } from "../ui/EmptyState";
@@ -10,6 +10,7 @@ interface TeamPulseProps {
   users: User[];
   tasks: Task[];
   projects: Project[];
+  focusUserId?: string | null;
   /** Optional: lets a person's active task row jump to that task's
    * detail in the existing FlowMap, reusing Dashboard's existing
    * task-inspection navigation rather than a new interaction system. */
@@ -26,12 +27,19 @@ export function TeamPulse({
   users,
   tasks,
   projects,
+  focusUserId,
   onInspectTask,
   onEditUser,
   onDeleteUser,
 }: TeamPulseProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const memberStats = getAllMemberStats(users, tasks);
+
+  useEffect(() => {
+    if (focusUserId && users.some((user) => user.id === focusUserId)) {
+      setSelectedId(focusUserId);
+    }
+  }, [focusUserId, users]);
 
   if (users.length === 0) {
     return (
@@ -51,11 +59,11 @@ export function TeamPulse({
     );
   }
 
-  const selected = selectedId
-    ? getMemberStats(
-        users.find((u) => u.id === selectedId)!,
-        tasks
-      )
+  const selectedUser = selectedId
+    ? users.find((user) => user.id === selectedId)
+    : undefined;
+  const selected = selectedUser
+    ? getMemberStats(selectedUser, tasks)
     : null;
 
   return (

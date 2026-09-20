@@ -6,7 +6,8 @@ import { Dashboard, type ActivePage } from "./pages/Dashboard";
 import { Settings } from "./pages/Settings";
 import { Profile } from "./pages/Profile";
 import { useDashboardData } from "./hooks/useDashboardData";
-import type { Task } from "./types";
+import type { Task, User } from "./types";
+import type { DashboardData } from "./hooks/useDashboardData";
 
 type AppPage = ActivePage | "settings" | "profile";
 
@@ -16,6 +17,11 @@ function App() {
   const [activePage, setActivePage] = useState<AppPage>("today");
   const [workspace, setWorkspace] = useState<string>(WORKSPACES[0]);
   const [liveTasks, setLiveTasks] = useState<Task[]>([]);
+  const [liveData, setLiveData] = useState<DashboardData>({
+    users: [],
+    projects: [],
+    tasks: [],
+  });
   const [searchTarget, setSearchTarget] = useState<{
     type: "task" | "project" | "person";
     id: string;
@@ -25,7 +31,10 @@ function App() {
 
   useEffect(() => {
     setLiveTasks(data.tasks);
-  }, [data.tasks]);
+    setLiveData(data);
+  }, [data]);
+
+  const currentUser: User | null = liveData.users[0] ?? null;
 
   function handleNavigateToResult(
     type: "task" | "project" | "person",
@@ -51,6 +60,7 @@ function App() {
         onClose={() => setSidebarOpen(false)}
         workspace={workspace}
         onWorkspaceChange={setWorkspace}
+        currentUser={currentUser}
       />
 
       <div className="df-main">
@@ -59,8 +69,9 @@ function App() {
           onSearchChange={setSearchQuery}
           onMenuClick={() => setSidebarOpen(true)}
           tasks={liveTasks}
-          projects={data.projects}
-          users={data.users}
+          projects={liveData.projects}
+          users={liveData.users}
+          currentUser={currentUser}
           onNavigateToResult={handleNavigateToResult}
           onNavigate={(page) => setActivePage(page as AppPage)}
         />
@@ -71,7 +82,11 @@ function App() {
             onWorkspaceChange={setWorkspace}
           />
         ) : activePage === "profile" ? (
-          <Profile tasks={liveTasks} />
+          <Profile
+            tasks={liveData.tasks}
+            projects={liveData.projects}
+            currentUser={currentUser}
+          />
         ) : (
           <Dashboard
             searchQuery={searchQuery}
@@ -79,6 +94,7 @@ function App() {
             workspace={workspace}
             onNavigate={setActivePage}
             onTasksChange={setLiveTasks}
+            onDataChange={setLiveData}
             searchTarget={searchTarget}
           />
         )}
