@@ -1,34 +1,64 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { api } from "../lib/api";
+import type { Project, Task, User } from "../types";
 
 export type DashboardStatus = "loading" | "success" | "error";
 
-/**
- * Simulates fetching dashboard data. There is no backend in this task,
- * so this stands in for a future API call — every consumer already
- * renders loading/error/success the same way it would for a real fetch.
- * Append ?forceError=1 to the URL to preview the error state.
- */
-export function useDashboardData(delayMs = 500) {
+export interface DashboardData {
+  users: User[];
+  projects: Project[];
+  tasks: Task[];
+}
+
+export function useDashboardData() {
   const [status, setStatus] = useState<DashboardStatus>("loading");
-  const [attempt, setAttempt] = useState(0);
+  const [data, setData] = useState<DashboardData>({
+    users: [],
+    projects: [],
+    tasks: [],
+  });
+  const [error, setError] = useState<string | null>(null);
+
+  const loadData = useCallback(async () => {
+    setStatus("loading");
+    setError(null);
+
+    try {
+      const [users, projects, tasks] = await Promise.all([
+        api.users.getAll(),
+        api.projects.getAll(),
+        api.tasks.getAll(),
+      ]);
+
+      setData({
+        users: users as User[],
+        projects: projects as Project[],
+        tasks: tasks as Task[],
+      });
+
+      setStatus("success");
+    } catch (err) {
+      setStatus("error");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to load dashboard data."
+      );
+    }
+  }, []);
 
   useEffect(() => {
-    // Intentional: this effect is the (simulated) data source itself.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setStatus("loading");
+    void loadData();
+  }, [loadData]);
 
-    const forceError = new URLSearchParams(
-      window.location.search
-    ).get("forceError") === "1";
+  const retry = () => {
+    void loadData();
+  };
 
-    const timer = window.setTimeout(() => {
-      setStatus(forceError ? "error" : "success");
-    }, delayMs);
-
-    return () => window.clearTimeout(timer);
-  }, [delayMs, attempt]);
-
-  const retry = () => setAttempt((current) => current + 1);
-
-  return { status, retry };
+  return {
+    status,
+    data,
+    error,
+    retry,
+  };
 }

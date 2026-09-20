@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Activity, Task, TaskStatus } from "../types";
 import { mockProjects } from "../data/mockProjects";
-import { mockTasks } from "../data/mockTasks";
 import { mockActivity } from "../data/mockActivity";
 import { currentUser, mockUsers } from "../data/mockUsers";
 import { FocusCard } from "../components/dashboard/FocusCard";
@@ -75,13 +74,18 @@ export function Dashboard({
   onTasksChange,
   searchTarget,
 }: DashboardProps) {
-  const { status, retry } = useDashboardData();
-
-  const [tasks, setTasks] = useState(mockTasks);
+const { status, retry, data } = useDashboardData();
+const [tasks, setTasks] = useState<Task[]>([]);
   const [activity, setActivity] = useState<Activity[]>(mockActivity);
   const [filters, setFilters] = useState<TaskFilterState>(
     DEFAULT_TASK_FILTER_STATE
   );
+
+useEffect(() => {
+  if (status === "success") {
+    setTasks(data.tasks);
+  }
+}, [status, data.tasks]);
 
   useEffect(() => {
     onTasksChange?.(tasks);
