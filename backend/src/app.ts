@@ -11,11 +11,12 @@ export function createApp(): Application {
   const app = express();
 
   const allowedOrigins = [
-  env.CORS_ORIGIN,
-  "http://localhost:5173",
-];
+    env.CORS_ORIGIN,
+    "http://localhost:5173",
+    "https://devflow-zeta-inky.vercel.app",
+  ];
 
-app.use(cors({ origin: allowedOrigins }));
+  app.use(cors({ origin: allowedOrigins }));
   app.use(express.json());
 
   app.get("/api/health", (_req, res) => {

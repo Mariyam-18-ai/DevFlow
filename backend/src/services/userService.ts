@@ -7,21 +7,19 @@ import {
 
 export const userService = {
   async getAll(): Promise<User[]> {
-    return await userRepository.findAll();
+    return userRepository.findAll();
   },
 
   async getById(id: string): Promise<User> {
     const user = await userRepository.findById(id);
-
     if (!user) {
       throw new AppError(`User not found: ${id}`, 404, "NOT_FOUND");
     }
-
     return user;
   },
 
   async create(input: CreateUserInput): Promise<User> {
-    return await userRepository.create(input);
+    return userRepository.create(input);
   },
 
   async update(
@@ -29,17 +27,14 @@ export const userService = {
     input: UpdateUserInput
   ): Promise<User> {
     const updated = await userRepository.update(id, input);
-
     if (!updated) {
       throw new AppError(`User not found: ${id}`, 404, "NOT_FOUND");
     }
-
     return updated;
   },
 
   async delete(id: string): Promise<void> {
     const deleted = await userRepository.delete(id);
-
     if (!deleted) {
       throw new AppError(`User not found: ${id}`, 404, "NOT_FOUND");
     }

@@ -7,9 +7,7 @@ import {
 import { userRepository } from "../repositories/userRepository.js";
 
 async function assertOwnerExists(ownerId: string): Promise<void> {
-  const owner = await userRepository.findById(ownerId);
-
-  if (!owner) {
+  if (!(await userRepository.findById(ownerId))) {
     throw new AppError(
       `Owner not found: ${ownerId}`,
       404,
@@ -20,12 +18,11 @@ async function assertOwnerExists(ownerId: string): Promise<void> {
 
 export const projectService = {
   async getAll(): Promise<Project[]> {
-    return await projectRepository.findAll();
+    return projectRepository.findAll();
   },
 
   async getById(id: string): Promise<Project> {
     const project = await projectRepository.findById(id);
-
     if (!project) {
       throw new AppError(
         `Project not found: ${id}`,
@@ -33,14 +30,12 @@ export const projectService = {
         "NOT_FOUND"
       );
     }
-
     return project;
   },
 
   async create(input: CreateProjectInput): Promise<Project> {
     await assertOwnerExists(input.ownerId);
-
-    return await projectRepository.create(input);
+    return projectRepository.create(input);
   },
 
   async update(
@@ -48,9 +43,7 @@ export const projectService = {
     input: UpdateProjectInput
   ): Promise<Project> {
     await assertOwnerExists(input.ownerId);
-
     const updated = await projectRepository.update(id, input);
-
     if (!updated) {
       throw new AppError(
         `Project not found: ${id}`,
@@ -58,13 +51,11 @@ export const projectService = {
         "NOT_FOUND"
       );
     }
-
     return updated;
   },
 
   async delete(id: string): Promise<void> {
     const deleted = await projectRepository.delete(id);
-
     if (!deleted) {
       throw new AppError(
         `Project not found: ${id}`,

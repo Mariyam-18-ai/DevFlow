@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Activity, Task, TaskStatus } from "../types";
-import { mockProjects } from "../data/mockProjects";
 import { mockActivity } from "../data/mockActivity";
-import { currentUser, mockUsers } from "../data/mockUsers";
+import { currentUser } from "../data/mockUsers";
 import { FocusCard } from "../components/dashboard/FocusCard";
 import { FocusRail } from "../components/dashboard/FocusRail";
 import { FlowMap } from "../components/dashboard/FlowMap";
@@ -22,6 +21,7 @@ import { TaskList } from "../components/tasks/TaskList";
 import { searchProjects, searchTasks } from "../lib/search";
 import { getBestNextTask, getTodayTasks } from "../lib/focusScore";
 import { useDashboardData } from "../hooks/useDashboardData";
+import { api } from "../lib/api";
 import {
   DEFAULT_TASK_FILTER_STATE,
   type TaskFilterState,
@@ -74,18 +74,22 @@ export function Dashboard({
   onTasksChange,
   searchTarget,
 }: DashboardProps) {
-const { status, retry, data } = useDashboardData();
-const [tasks, setTasks] = useState<Task[]>([]);
+  const { status, retry, data } = useDashboardData();
+
+  const users = data.users;
+  const projects = data.projects;
+
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [activity, setActivity] = useState<Activity[]>(mockActivity);
   const [filters, setFilters] = useState<TaskFilterState>(
     DEFAULT_TASK_FILTER_STATE
   );
 
-useEffect(() => {
-  if (status === "success") {
-    setTasks(data.tasks);
-  }
-}, [status, data.tasks]);
+  useEffect(() => {
+    if (status === "success") {
+      setTasks(data.tasks);
+    }
+  }, [status, data.tasks]);
 
   useEffect(() => {
     onTasksChange?.(tasks);
@@ -117,31 +121,31 @@ const [highlightedProjectId, setHighlightedProjectId] =
   useState<string | null>(null);
 
 const filteredProjects = useMemo(
-  () => searchProjects(mockProjects, searchQuery, tasks),
-  [searchQuery, tasks]
+  () => searchProjects(projects, searchQuery, tasks),
+  [searchQuery, tasks, projects]
 );
 
 const searchedTasks = useMemo(
-  () => searchTasks(tasks, searchQuery, mockUsers),
-  [tasks, searchQuery]
+  () => searchTasks(tasks, searchQuery, users),
+  [tasks, searchQuery, users]
 );
 
 const searchedUsers = useMemo(
   () =>
     searchQuery.trim()
-      ? mockUsers.filter((user) =>
+      ? users.filter((user) =>
           `${user.name} ${user.role}`
             .toLowerCase()
             .includes(searchQuery.trim().toLowerCase())
         )
-      : mockUsers,
-  [searchQuery]
+      : users,
+  [searchQuery, users]
 );
 
-  const bestNextTask = getBestNextTask(tasks, mockProjects);
+  const bestNextTask = getBestNextTask(tasks, projects);
 
   const bestNextProject = bestNextTask
-    ? mockProjects.find(
+    ? projects.find(
         (project) => project.id === bestNextTask.projectId
       )
     : undefined;
@@ -150,7 +154,7 @@ const searchedUsers = useMemo(
   // Best Action, so the two sections don't repeat the same task.
   const todayTasks = getTodayTasks(
     tasks,
-    mockProjects,
+    projects,
     bestNextTask?.id ?? null
   );
 
@@ -159,7 +163,7 @@ const searchedUsers = useMemo(
     : null;
 
   const focusProject = focusTask
-    ? mockProjects.find(
+    ? projects.find(
         (project) => project.id === focusTask.projectId
       )
     : undefined;
@@ -178,12 +182,26 @@ const searchedUsers = useMemo(
     ]);
   }
 
-  function setTaskStatus(taskId: string, nextStatus: TaskStatus) {
-    setTasks((currentTasks) =>
-      currentTasks.map((task) =>
-        task.id === taskId ? { ...task, status: nextStatus } : task
-      )
-    );
+  async function setTaskStatus(
+    taskId: string,
+    nextStatus: TaskStatus
+  ) {
+    try {
+      const updatedTask = await api.tasks.updateStatus(
+        taskId,
+        nextStatus
+      );
+
+      setTasks((currentTasks) =>
+        currentTasks.map((task) =>
+          task.id === taskId
+            ? (updatedTask as Task)
+            : task
+        )
+      );
+    } catch (error) {
+      console.error("Failed to update task status:", error);
+    }
   }
 
   function handleToggleTask(taskId: string) {
@@ -312,15 +330,15 @@ const searchedUsers = useMemo(
 
             <FocusRail
               tasks={tasks}
-              projects={mockProjects}
+              projects={projects}
               onTaskClick={handleInspectTask}
             />
 
             <div id="today-flow-map">
               <FlowMap
                 tasks={tasks}
-                projects={mockProjects}
-                users={mockUsers}
+                projects={projects}
+                users={users}
                 selectedTaskId={flowSelectedTaskId}
                 onSelectTask={setFlowSelectedTaskId}
                 onStartFocus={handleStartFocus}
@@ -344,7 +362,7 @@ const searchedUsers = useMemo(
               <TaskList
                 tasks={todayTasks}
                 allTasks={tasks}
-                projects={mockProjects}
+                projects={projects}
                 onToggle={handleToggleTask}
                 onFocus={handleStartFocus}
                 emptyTitle="No tasks need your attention today."
@@ -375,14 +393,14 @@ const searchedUsers = useMemo(
             <TeamPulse
               users={searchedUsers}
               tasks={tasks}
-              projects={mockProjects}
+              projects={projects}
               onInspectTask={handleInspectTask}
             />
             <WorkloadChart users={searchedUsers} tasks={tasks} />
             <Blockers
               tasks={tasks}
-              projects={mockProjects}
-              users={mockUsers}
+              projects={projects}
+              users={users}
               onInspectTask={handleInspectTask}
             />
           </>
@@ -391,8 +409,8 @@ const searchedUsers = useMemo(
         {status === "success" && activePage === "insights" && (
           <>
             <FlowVelocity tasks={tasks} />
-            <WorkloadChart users={mockUsers} tasks={tasks} />
-            <ProjectHealthMatrix projects={mockProjects} tasks={tasks} />
+            <WorkloadChart users={users} tasks={tasks} />
+            <ProjectHealthMatrix projects={projects} tasks={tasks} />
           </>
         )}
       </div>

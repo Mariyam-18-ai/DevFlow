@@ -1,43 +1,39 @@
-import { useState } from "react";
-import type { Task } from "./types";
+import { useEffect, useState } from "react";
 import { Navbar } from "./components/layout/Navbar";
 import { Sidebar } from "./components/layout/Sidebar";
 import { WORKSPACES } from "./lib/workspaces";
 import { Dashboard, type ActivePage } from "./pages/Dashboard";
-import { mockProjects } from "./data/mockProjects";
-import { mockTasks } from "./data/mockTasks";
-import { mockUsers } from "./data/mockUsers";
 import { Settings } from "./pages/Settings";
 import { Profile } from "./pages/Profile";
+import { useDashboardData } from "./hooks/useDashboardData";
+import type { Task } from "./types";
 
-type AppPage = ActivePage | "settings" | "profile";
+ type AppPage = ActivePage | "settings" | "profile";
 
 function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
   const [activePage, setActivePage] =
     useState<AppPage>("today");
-
   const [workspace, setWorkspace] =
     useState<string>(WORKSPACES[0]);
-
-  const [liveTasks, setLiveTasks] =
-    useState<Task[]>(mockTasks);
-
+  const [liveTasks, setLiveTasks] = useState<Task[]>([]);
   const [searchTarget, setSearchTarget] = useState<{
     type: "task" | "project" | "person";
     id: string;
   } | null>(null);
 
- function handleNavigateToResult(
-  type: "task" | "project" | "person",
-  id: string
-) {
-    setSearchTarget({
-      type,
-      id,
-    });
+  const { data } = useDashboardData();
+
+  useEffect(() => {
+    setLiveTasks(data.tasks);
+  }, [data.tasks]);
+
+  function handleNavigateToResult(
+    type: "task" | "project" | "person",
+    id: string
+  ) {
+    setSearchTarget({ type, id });
 
     if (type === "task") {
       setActivePage("today");
@@ -67,19 +63,17 @@ function App() {
           onSearchChange={setSearchQuery}
           onMenuClick={() => setSidebarOpen(true)}
           tasks={liveTasks}
-          projects={mockProjects}
-          users={mockUsers}
+          projects={data.projects}
+          users={data.users}
           onNavigateToResult={handleNavigateToResult}
-          onNavigate={(page) =>
-            setActivePage(page)
-          }
+          onNavigate={(page) => setActivePage(page)}
         />
 
         {activePage === "settings" ? (
-  <Settings
-    workspace={workspace}
-    onWorkspaceChange={setWorkspace}
-  />
+          <Settings
+            workspace={workspace}
+            onWorkspaceChange={setWorkspace}
+          />
         ) : activePage === "profile" ? (
           <Profile tasks={liveTasks} />
         ) : (

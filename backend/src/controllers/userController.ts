@@ -1,24 +1,22 @@
-import { Request, Response, NextFunction } from "express";
+import { NextFunction, Request, Response } from "express";
 import { userService } from "../services/userService.js";
 import { userInputSchema } from "../schemas/userSchema.js";
-import { AppError } from "../types/index.js";
 
 export const userController = {
   async getAll(
     _req: Request,
     res: Response,
     next: NextFunction
-  ) {
+  ): Promise<void> {
     try {
       const users = await userService.getAll();
-
       res.status(200).json({
         success: true,
         data: users,
         meta: { count: users.length },
       });
-    } catch (error) {
-      next(error);
+    } catch (err) {
+      next(err);
     }
   },
 
@@ -26,18 +24,14 @@ export const userController = {
     req: Request,
     res: Response,
     next: NextFunction
-  ) {
+  ): Promise<void> {
     try {
       const user = await userService.getById(
         String(req.params.id)
       );
-
-      res.status(200).json({
-        success: true,
-        data: user,
-      });
-    } catch (error) {
-      next(error);
+      res.status(200).json({ success: true, data: user });
+    } catch (err) {
+      next(err);
     }
   },
 
@@ -45,26 +39,13 @@ export const userController = {
     req: Request,
     res: Response,
     next: NextFunction
-  ) {
+  ): Promise<void> {
     try {
-      const result = userInputSchema.safeParse(req.body);
-
-      if (!result.success) {
-        throw new AppError(
-          "Invalid user data",
-          400,
-          "VALIDATION_ERROR"
-        );
-      }
-
-      const user = await userService.create(result.data);
-
-      res.status(201).json({
-        success: true,
-        data: user,
-      });
-    } catch (error) {
-      next(error);
+      const input = userInputSchema.parse(req.body);
+      const user = await userService.create(input);
+      res.status(201).json({ success: true, data: user });
+    } catch (err) {
+      next(err);
     }
   },
 
@@ -72,29 +53,16 @@ export const userController = {
     req: Request,
     res: Response,
     next: NextFunction
-  ) {
+  ): Promise<void> {
     try {
-      const result = userInputSchema.safeParse(req.body);
-
-      if (!result.success) {
-        throw new AppError(
-          "Invalid user data",
-          400,
-          "VALIDATION_ERROR"
-        );
-      }
-
+      const input = userInputSchema.parse(req.body);
       const user = await userService.update(
         String(req.params.id),
-        result.data
+        input
       );
-
-      res.status(200).json({
-        success: true,
-        data: user,
-      });
-    } catch (error) {
-      next(error);
+      res.status(200).json({ success: true, data: user });
+    } catch (err) {
+      next(err);
     }
   },
 
@@ -102,15 +70,12 @@ export const userController = {
     req: Request,
     res: Response,
     next: NextFunction
-  ) {
+  ): Promise<void> {
     try {
-      await userService.delete(
-        String(req.params.id)
-      );
-
+      await userService.delete(String(req.params.id));
       res.status(204).send();
-    } catch (error) {
-      next(error);
+    } catch (err) {
+      next(err);
     }
   },
 };
