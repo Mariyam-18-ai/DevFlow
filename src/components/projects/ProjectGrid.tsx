@@ -9,6 +9,8 @@ interface ProjectGridProps {
     projectId: string
   ) => void;
   highlightedProjectId?: string | null;
+  onEdit?: (project: Project) => void;
+  onDelete?: (projectId: string) => void;
 }
 
 export function ProjectGrid({
@@ -16,6 +18,8 @@ export function ProjectGrid({
   tasks,
   onProjectClick,
   highlightedProjectId,
+  onEdit,
+  onDelete,
 }: ProjectGridProps) {
   if (!projects.length) {
     return (
@@ -37,6 +41,8 @@ export function ProjectGrid({
           highlighted={
             project.id === highlightedProjectId
           }
+          onEdit={onEdit}
+          onDelete={onDelete}
         />
       ))}
     </div>

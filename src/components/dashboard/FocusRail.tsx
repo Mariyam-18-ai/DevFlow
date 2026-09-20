@@ -1,5 +1,6 @@
 import type { Project, Task } from "../../types";
 import { getFocusScore } from "../../lib/focusScore";
+import { formatDueDate } from "../../lib/dateUtils";
 
 interface FocusRailProps {
   tasks: Task[];
@@ -51,7 +52,7 @@ export function FocusRail({
             <div>
               <strong>{task.title}</strong>
               <span>
-                {task.dueDate} ·{" "}
+                {formatDueDate(task.dueDate)} ·{" "}
                 {task.priority} priority
               </span>
             </div>

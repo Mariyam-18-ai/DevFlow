@@ -13,6 +13,8 @@ interface ProjectCardProps {
   tasks: Task[];
   onClick?: (projectId: string) => void;
   highlighted?: boolean;
+  onEdit?: (project: Project) => void;
+  onDelete?: (projectId: string) => void;
 }
 
 const projectColors: Record<string, string> = {
@@ -27,6 +29,8 @@ export function ProjectCard({
   tasks,
   onClick,
   highlighted = false,
+  onEdit,
+  onDelete,
 }: ProjectCardProps) {
   // Health and progress are computed live from current task data
   // (lib/projectHealth) rather than the static project.health field,
@@ -42,13 +46,19 @@ export function ProjectCard({
   const healthTone = getHealthTone(health);
 
   return (
-    <button
-      type="button"
+    <article
       id={`project-${project.id}`}
       className={`df-project-card ${
         highlighted ? "is-highlighted" : ""
       }`}
       onClick={() => onClick?.(project.id)}
+      onKeyDown={(event) => {
+        if ((event.key === "Enter" || event.key === " ") && onClick) {
+          event.preventDefault();
+          onClick(project.id);
+        }
+      }}
+      tabIndex={onClick ? 0 : undefined}
     >
       <div className="df-project-card-top">
         <div className="df-project-title">
@@ -56,7 +66,7 @@ export function ProjectCard({
             className="df-project-icon"
             style={{
               backgroundColor:
-                projectColors[project.color] ??
+                (projectColors[project.color] ?? project.color) ||
                 "#172033",
             }}
           >
@@ -66,9 +76,19 @@ export function ProjectCard({
           <h3>{project.name}</h3>
         </div>
 
-        <Badge tone={healthTone}>
-          {health}
-        </Badge>
+        <div className="df-card-actions">
+          {onEdit && (
+            <button type="button" onClick={(event) => { event.stopPropagation(); onEdit(project); }}>
+              Edit
+            </button>
+          )}
+          {onDelete && (
+            <button type="button" className="is-danger" onClick={(event) => { event.stopPropagation(); onDelete(project.id); }}>
+              Delete
+            </button>
+          )}
+          <Badge tone={healthTone}>{health}</Badge>
+        </div>
       </div>
 
       <p>{project.description}</p>
@@ -85,6 +105,6 @@ export function ProjectCard({
 
         <span>{progress}%</span>
       </div>
-    </button>
+    </article>
   );
 }

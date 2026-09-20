@@ -2431,3 +2431,334 @@ button.df-team-task-row:hover {
     padding-right: 4px;
   }
 }
+
+
+.df-page-action-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -12px;
+  margin-bottom: -4px;
+}
+
+.df-primary-button,
+.df-secondary-button {
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 9px 13px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease, opacity 120ms ease;
+}
+
+.df-primary-button {
+  background: var(--df-accent);
+  color: #111827;
+}
+
+.df-primary-button:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.df-secondary-button {
+  background: var(--df-surface-raised);
+  border-color: var(--df-border);
+  color: var(--df-text);
+}
+
+.df-secondary-button:hover:not(:disabled) {
+  border-color: var(--df-border-strong);
+}
+
+.df-primary-button:disabled,
+.df-secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.df-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4, 7, 12, 0.72);
+  backdrop-filter: blur(7px);
+}
+
+.df-management-modal {
+  width: min(720px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: auto;
+  border: 1px solid var(--df-border-strong);
+  border-radius: var(--df-radius);
+  background: var(--df-surface);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
+}
+
+.df-management-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px 22px 14px;
+  border-bottom: 1px solid var(--df-border);
+}
+
+.df-management-modal-header h2 {
+  margin: 5px 0 0;
+  font-size: 19px;
+}
+
+.df-modal-close {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 1px solid var(--df-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--df-text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.df-modal-close:hover {
+  color: var(--df-text);
+  border-color: var(--df-border-strong);
+}
+
+.df-management-modal  .df-action-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 11px 13px;
+  border: 1px solid var(--df-border-strong);
+  border-radius: 10px;
+  background: var(--df-surface);
+  color: var(--df-text);
+  box-shadow: 0 12px 32px rgba(0,0,0,.32);
+  font-size: 12px;
+}
+
+.df-action-toast button {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  background: transparent;
+  color: var(--df-text-muted);
+  cursor: pointer;
+  font-size: 17px;
+}
+
+.df-crud-message {
+  margin: 14px 22px 0;
+}
+
+.df-management-modal-body {
+  padding: 18px 22px 4px;
+}
+
+.df-crud-message {
+  padding: 10px 13px;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 9px;
+  background: rgba(245, 158, 11, 0.08);
+  color: var(--df-accent);
+  font-size: 12px;
+}
+
+.df-crud-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.df-crud-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--df-text-muted);
+  font-size: 12px;
+}
+
+.df-crud-form label:nth-child(2),
+.df-crud-form textarea {
+  min-width: 0;
+}
+
+.df-crud-form input,
+.df-crud-form textarea,
+.df-crud-form select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 11px;
+  border: 1px solid var(--df-border-strong);
+  border-radius: 8px;
+  background: var(--df-bg);
+  color: var(--df-text);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.df-crud-form input::placeholder,
+.df-crud-form textarea::placeholder {
+  color: var(--df-text-dim);
+}
+
+.df-crud-form input:focus,
+.df-crud-form textarea:focus,
+.df-crud-form select:focus {
+  border-color: var(--df-accent);
+  box-shadow: 0 0 0 2px var(--df-accent-soft);
+}
+
+.df-crud-form textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.df-crud-form label:has(textarea) {
+  grid-column: 1 / -1;
+}
+
+.df-checkbox-field {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+  align-self: center;
+}
+
+.df-checkbox-field input {
+  width: auto;
+}
+
+.df-management-modal > .df-crud-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 22px 20px;
+  border-top: 1px solid var(--df-border);
+  margin-top: 18px;
+}
+
+.df-card-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.df-card-actions button,
+.df-team-card-actions button {
+  border: 1px solid var(--df-border);
+  border-radius: 6px;
+  padding: 4px 7px;
+  background: transparent;
+  color: var(--df-text-muted);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.df-card-actions button:hover,
+.df-team-card-actions button:hover {
+  border-color: var(--df-border-strong);
+  color: var(--df-text);
+}
+
+.df-card-actions button.is-danger,
+.df-team-card-actions button.is-danger {
+  color: var(--df-danger);
+}
+
+.df-project-card {
+  cursor: pointer;
+}
+
+.df-project-card:focus-visible,
+.df-team-card:focus-visible {
+  outline: 2px solid var(--df-accent);
+  outline-offset: 2px;
+}
+
+.df-project-card .df-card-actions {
+  justify-content: flex-end;
+}
+
+.df-team-card-shell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: var(--df-radius);
+}
+
+.df-team-card-shell .df-team-card {
+  width: 100%;
+}
+
+.df-team-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
+  padding: 7px 9px;
+  border: 1px solid var(--df-border);
+  border-top: 0;
+  border-radius: 0 0 var(--df-radius) var(--df-radius);
+  background: var(--df-surface);
+}
+
+.df-team-card-shell .df-team-card {
+  border-radius: var(--df-radius) var(--df-radius) 0 0;
+}
+
+.df-task-card-side {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 42%;
+}
+
+@media (max-width: 700px) {
+  .df-page-action-row {
+    margin-top: -8px;
+  }
+
+  .df-modal-backdrop {
+    align-items: flex-end;
+    padding: 10px;
+  }
+
+  .df-management-modal {
+    max-height: calc(100vh - 20px);
+    border-radius: 16px;
+  }
+
+  .df-crud-form {
+    grid-template-columns: 1fr;
+  }
+
+  .df-crud-form label:has(textarea) {
+    grid-column: auto;
+  }
+
+  .df-management-modal-header,
+  .df-management-modal-body,
+  .df-management-modal > .df-crud-actions {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .df-task-card-side {
+    max-width: 50%;
+  }
+}
+

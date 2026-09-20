@@ -8,15 +8,13 @@ import { Profile } from "./pages/Profile";
 import { useDashboardData } from "./hooks/useDashboardData";
 import type { Task } from "./types";
 
- type AppPage = ActivePage | "settings" | "profile";
+type AppPage = ActivePage | "settings" | "profile";
 
 function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activePage, setActivePage] =
-    useState<AppPage>("today");
-  const [workspace, setWorkspace] =
-    useState<string>(WORKSPACES[0]);
+  const [activePage, setActivePage] = useState<AppPage>("today");
+  const [workspace, setWorkspace] = useState<string>(WORKSPACES[0]);
   const [liveTasks, setLiveTasks] = useState<Task[]>([]);
   const [searchTarget, setSearchTarget] = useState<{
     type: "task" | "project" | "person";
@@ -48,9 +46,7 @@ function App() {
     <div className="df-app">
       <Sidebar
         activePage={activePage}
-        onPageChange={(page) =>
-          setActivePage(page as AppPage)
-        }
+        onPageChange={(page) => setActivePage(page as AppPage)}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         workspace={workspace}
@@ -66,7 +62,7 @@ function App() {
           projects={data.projects}
           users={data.users}
           onNavigateToResult={handleNavigateToResult}
-          onNavigate={(page) => setActivePage(page)}
+          onNavigate={(page) => setActivePage(page as AppPage)}
         />
 
         {activePage === "settings" ? (

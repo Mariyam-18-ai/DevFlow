@@ -5,6 +5,7 @@ import { ProgressBar } from "../ui/ProgressBar";
 import { getProjectHealth, getProjectProgress, getProjectTasks } from "../../lib/projectHealth";
 import { getHealthTone } from "../../lib/badgeTone";
 import { EmptyState } from "../ui/EmptyState";
+import { isDueToday } from "../../lib/dateUtils";
 
 interface ProjectHealthMatrixProps {
   projects: Project[];
@@ -129,7 +130,7 @@ export function ProjectHealthMatrix({ projects, tasks }: ProjectHealthMatrixProp
             </div>
           </div>
 
-          {selectedTasks.some((t) => t.dueDate === "Today" && t.status !== "done") && (
+          {selectedTasks.some((t) => isDueToday(t.dueDate) && t.status !== "done") && (
             <p className="df-focus-blocks-note">Has work due today.</p>
           )}
         </div>

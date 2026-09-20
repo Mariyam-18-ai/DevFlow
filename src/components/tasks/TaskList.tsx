@@ -8,6 +8,8 @@ interface TaskListProps {
   projects: Project[];
   onToggle: (taskId: string) => void;
   onFocus?: (taskId: string) => void;
+  onEdit?: (task: Task) => void;
+  onDelete?: (taskId: string) => void;
   hasActiveFilters?: boolean;
   onResetFilters?: () => void;
   emptyTitle?: string;
@@ -20,6 +22,8 @@ export function TaskList({
   projects,
   onToggle,
   onFocus,
+  onEdit,
+  onDelete,
   hasActiveFilters = false,
   onResetFilters,
   emptyTitle = "No matching work found",
@@ -52,6 +56,8 @@ export function TaskList({
           allTasks={allTasks}
           onToggle={onToggle}
           onFocus={onFocus}
+          onEdit={onEdit}
+          onDelete={onDelete}
         />
       ))}
     </div>

@@ -1,5 +1,6 @@
 import type { Project, Task } from "../types";
 import { getProjectHealth } from "./projectHealth";
+import { isDueToday, isDueTomorrow, isDueYesterday } from "./dateUtils";
 
 export interface FocusReason {
   label: string;
@@ -20,17 +21,17 @@ export function getFocusReasons(
     });
   }
 
-  if (task.dueDate === "Yesterday" && task.status !== "done") {
+  if (isDueYesterday(task.dueDate) && task.status !== "done") {
     reasons.push({
       label: "Overdue",
       points: 35,
     });
   } else if (
-    task.dueDate === "Today" ||
-    task.dueDate === "Tomorrow"
+    isDueToday(task.dueDate) ||
+    isDueTomorrow(task.dueDate)
   ) {
     reasons.push({
-      label: `Due ${task.dueDate.toLowerCase()}`,
+      label: `Due ${isDueToday(task.dueDate) ? "today" : "tomorrow"}`,
       points: 25,
     });
   }

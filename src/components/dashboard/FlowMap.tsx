@@ -1,6 +1,7 @@
 import type { Project, Task, TaskStatus, User } from "../../types";
 import { getBlockingTask } from "../../lib/taskLinks";
 import { TASK_STATUS_LABEL } from "../../lib/badgeTone";
+import { formatDueDate } from "../../lib/dateUtils";
 
 interface FlowMapProps {
   tasks: Task[];
@@ -165,7 +166,7 @@ export function FlowMap({
 
             <div>
               <span>Due date</span>
-              <strong>{selectedTask.dueDate}</strong>
+              <strong>{formatDueDate(selectedTask.dueDate)}</strong>
             </div>
 
             <div>

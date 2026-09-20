@@ -14,6 +14,8 @@ interface TeamPulseProps {
    * detail in the existing FlowMap, reusing Dashboard's existing
    * task-inspection navigation rather than a new interaction system. */
   onInspectTask?: (taskId: string) => void;
+  onEditUser?: (user: User) => void;
+  onDeleteUser?: (userId: string) => void;
 }
 
 // Rough weekly capacity used only to express workload as a percentage;
@@ -25,6 +27,8 @@ export function TeamPulse({
   tasks,
   projects,
   onInspectTask,
+  onEditUser,
+  onDeleteUser,
 }: TeamPulseProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const memberStats = getAllMemberStats(users, tasks);
@@ -76,14 +80,14 @@ export function TeamPulse({
           ).size;
 
           return (
-            <button
-              type="button"
-              key={stats.user.id}
-              className={`df-team-card ${selectedId === stats.user.id ? "is-selected" : ""}`}
-              onClick={() =>
-                setSelectedId((current) => (current === stats.user.id ? null : stats.user.id))
-              }
-            >
+            <div className="df-team-card-shell" key={stats.user.id}>
+              <button
+                type="button"
+                className={`df-team-card ${selectedId === stats.user.id ? "is-selected" : ""}`}
+                onClick={() =>
+                  setSelectedId((current) => (current === stats.user.id ? null : stats.user.id))
+                }
+              >
               <div className="df-team-card-top">
                 <div className="df-avatar">{stats.user.initials}</div>
                 <div>
@@ -111,8 +115,19 @@ export function TeamPulse({
                 </div>
               </div>
 
-              <ProgressBar value={workloadPct} label="Workload" />
-            </button>
+                <ProgressBar value={workloadPct} label="Workload" />
+              </button>
+              {(onEditUser || onDeleteUser) && (
+                <div className="df-team-card-actions">
+                  {onEditUser && (
+                    <button type="button" onClick={() => onEditUser(stats.user)}>Edit</button>
+                  )}
+                  {onDeleteUser && (
+                    <button type="button" className="is-danger" onClick={() => onDeleteUser(stats.user.id)}>Delete</button>
+                  )}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>

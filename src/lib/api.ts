@@ -4,14 +4,13 @@ const API_BASE_URL =
 
 interface ApiResponse<T> {
   success: boolean;
-  data?: T;
+  data: T;
   meta?: {
     count?: number;
   };
   error?: {
     code: string;
     message: string;
-    details?: unknown;
   };
 }
 
@@ -40,7 +39,7 @@ async function apiRequest<T>(
     );
   }
 
-  return result.data as T;
+  return result.data;
 }
 
 export const api = {
@@ -50,7 +49,7 @@ export const api = {
     getById: (id: string) =>
       apiRequest(`/users/${id}`),
 
-    create: (user: {
+    create: (data: {
       name: string;
       role: string;
       initials: string;
@@ -58,12 +57,12 @@ export const api = {
     }) =>
       apiRequest("/users", {
         method: "POST",
-        body: JSON.stringify(user),
+        body: JSON.stringify(data),
       }),
 
     update: (
       id: string,
-      user: {
+      data: {
         name: string;
         role: string;
         initials: string;
@@ -72,7 +71,7 @@ export const api = {
     ) =>
       apiRequest(`/users/${id}`, {
         method: "PUT",
-        body: JSON.stringify(user),
+        body: JSON.stringify(data),
       }),
 
     delete: (id: string) =>
@@ -87,7 +86,7 @@ export const api = {
     getById: (id: string) =>
       apiRequest(`/projects/${id}`),
 
-    create: (project: {
+    create: (data: {
       name: string;
       description: string;
       ownerId: string;
@@ -96,12 +95,12 @@ export const api = {
     }) =>
       apiRequest("/projects", {
         method: "POST",
-        body: JSON.stringify(project),
+        body: JSON.stringify(data),
       }),
 
     update: (
       id: string,
-      project: {
+      data: {
         name: string;
         description: string;
         ownerId: string;
@@ -111,7 +110,7 @@ export const api = {
     ) =>
       apiRequest(`/projects/${id}`, {
         method: "PUT",
-        body: JSON.stringify(project),
+        body: JSON.stringify(data),
       }),
 
     delete: (id: string) =>
@@ -126,7 +125,7 @@ export const api = {
     getById: (id: string) =>
       apiRequest(`/tasks/${id}`),
 
-    create: (task: {
+    create: (data: {
       title: string;
       description: string;
       projectId: string;
@@ -139,12 +138,12 @@ export const api = {
     }) =>
       apiRequest("/tasks", {
         method: "POST",
-        body: JSON.stringify(task),
+        body: JSON.stringify(data),
       }),
 
     update: (
       id: string,
-      task: {
+      data: {
         title: string;
         description: string;
         projectId: string;
@@ -158,7 +157,7 @@ export const api = {
     ) =>
       apiRequest(`/tasks/${id}`, {
         method: "PUT",
-        body: JSON.stringify(task),
+        body: JSON.stringify(data),
       }),
 
     updateStatus: (

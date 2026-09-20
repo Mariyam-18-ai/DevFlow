@@ -6,6 +6,7 @@ import {
   TASK_STATUS_LABEL,
 } from "../../lib/badgeTone";
 import { Badge } from "../ui/Badge";
+import { formatDueDate } from "../../lib/dateUtils";
 
 interface TaskCardProps {
   task: Task;
@@ -13,6 +14,8 @@ interface TaskCardProps {
   allTasks: Task[];
   onToggle: (taskId: string) => void;
   onFocus?: (taskId: string) => void;
+  onEdit?: (task: Task) => void;
+  onDelete?: (taskId: string) => void;
 }
 
 export function TaskCard({
@@ -21,6 +24,8 @@ export function TaskCard({
   allTasks,
   onToggle,
   onFocus,
+  onEdit,
+  onDelete,
 }: TaskCardProps) {
   const blockedBy =
     task.status === "blocked"
@@ -55,7 +60,7 @@ export function TaskCard({
 
         <div className="df-task-card-meta">
           {project && <span>{project.name}</span>}
-          <span>Due {task.dueDate}</span>
+          <span>Due {formatDueDate(task.dueDate)}</span>
           <span>{task.estimatedHours}h estimate</span>
         </div>
 
@@ -84,6 +89,21 @@ export function TaskCard({
           >
             ◎
           </button>
+        )}
+
+        {(onEdit || onDelete) && (
+          <div className="df-card-actions">
+            {onEdit && (
+              <button type="button" onClick={() => onEdit(task)} aria-label={`Edit ${task.title}`}>
+                Edit
+              </button>
+            )}
+            {onDelete && (
+              <button type="button" className="is-danger" onClick={() => onDelete(task.id)} aria-label={`Delete ${task.title}`}>
+                Delete
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>

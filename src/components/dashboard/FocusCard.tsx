@@ -8,6 +8,7 @@ import { getPriorityTone } from "../../lib/badgeTone";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { ProgressRing } from "../ui/ProgressRing";
+import { formatDueDate } from "../../lib/dateUtils";
 
 interface FocusCardProps {
   task: Task | null;
@@ -82,7 +83,7 @@ export function FocusCard({
             {task.priority.toUpperCase()} PRIORITY
           </Badge>
 
-          <span>Due {task.dueDate}</span>
+          <span>Due {formatDueDate(task.dueDate)}</span>
 
           <span>
             {task.estimatedHours}h estimated

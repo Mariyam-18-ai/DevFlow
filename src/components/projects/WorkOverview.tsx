@@ -23,6 +23,10 @@ interface WorkOverviewProps {
   onTaskFocus?: (taskId: string) => void;
   onProjectClick?: (projectId: string) => void;
   highlightedProjectId?: string | null;
+  onEditProject?: (project: Project) => void;
+  onDeleteProject?: (projectId: string) => void;
+  onEditTask?: (task: Task) => void;
+  onDeleteTask?: (taskId: string) => void;
 }
 
 export function WorkOverview({
@@ -35,6 +39,10 @@ export function WorkOverview({
   onTaskFocus,
   onProjectClick,
   highlightedProjectId,
+  onEditProject,
+  onDeleteProject,
+  onEditTask,
+  onDeleteTask,
 }: WorkOverviewProps) {
   // Search already narrowed `tasks` upstream (in Dashboard); status +
   // priority filters combine with AND via the shared filterUtils helper.
@@ -78,6 +86,8 @@ export function WorkOverview({
           tasks={allTasks}
           onProjectClick={onProjectClick}
           highlightedProjectId={highlightedProjectId}
+          onEdit={onEditProject}
+          onDelete={onDeleteProject}
         />
       </section>
 
@@ -105,6 +115,8 @@ export function WorkOverview({
           projects={projects}
           onToggle={onTaskToggle}
           onFocus={onTaskFocus}
+          onEdit={onEditTask}
+          onDelete={onDeleteTask}
           hasActiveFilters={hasActiveTaskFilters(filters)}
           onResetFilters={handleResetFilters}
         />
