@@ -10,7 +10,12 @@ import { taskRoutes } from "./routes/taskRoutes.js";
 export function createApp(): Application {
   const app = express();
 
-  app.use(cors({ origin: env.CORS_ORIGIN }));
+  const allowedOrigins = [
+  env.CORS_ORIGIN,
+  "http://localhost:5173",
+];
+
+app.use(cors({ origin: allowedOrigins }));
   app.use(express.json());
 
   app.get("/api/health", (_req, res) => {
