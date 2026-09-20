@@ -32,9 +32,8 @@ export function ProjectCard({
   onEdit,
   onDelete,
 }: ProjectCardProps) {
-  // Health and progress are computed live from current task data
-  // (lib/projectHealth) rather than the static project.health field,
-  // so this stays consistent with ProjectHealthMatrix.
+  // Progress is derived from tasks, while health is the persisted
+  // project field returned by the API.
   const projectTasks = getProjectTasks(project.id, tasks);
   const completedTasks = projectTasks.filter(
     (task) => task.status === "done"
@@ -42,7 +41,7 @@ export function ProjectCard({
   const totalTasks = projectTasks.length;
   const progress = getProjectProgress(project.id, tasks);
 
-  const health = getProjectHealth(project, tasks);
+  const health = getProjectHealth(project);
   const healthTone = getHealthTone(health);
 
   return (

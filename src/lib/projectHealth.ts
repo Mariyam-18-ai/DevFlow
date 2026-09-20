@@ -29,34 +29,9 @@ export function getProjectProgress(
   );
 }
 
-export function getProjectHealth(
-  project: Project,
-  tasks: Task[]
-): "healthy" | "at-risk" | "blocked" {
-  const projectTasks = getProjectTasks(
-    project.id,
-    tasks
-  );
-
-  if (
-    projectTasks.some(
-      (task) =>
-        task.status === "blocked" &&
-        task.priority === "high"
-    )
-  ) {
-    return "blocked";
-  }
-
-  if (
-    projectTasks.some(
-      (task) =>
-        task.priority === "high" &&
-        task.status !== "done"
-    )
-  ) {
-    return "at-risk";
-  }
-
-  return "healthy";
+export function getProjectHealth(project: Project): "healthy" | "at-risk" | "blocked" {
+  // Project health is persisted as part of the Project record. Task data
+  // drives progress, but it must not overwrite the health selected by the
+  // user in the project form.
+  return project.health;
 }

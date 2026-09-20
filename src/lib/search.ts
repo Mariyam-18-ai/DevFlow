@@ -4,7 +4,7 @@ import { getProjectHealth } from "./projectHealth";
 export function searchProjects(
   projects: Project[],
   query: string,
-  tasks: Task[] = []
+  _tasks: Task[] = []
 ): Project[] {
   const normalized = query
     .trim()
@@ -15,12 +15,9 @@ export function searchProjects(
   }
 
   return projects.filter((project) => {
-    // Matches the same computed health (lib/projectHealth) that
-    // ProjectCard, ProjectHealthMatrix and the Next Best Action
-    // reasoning already use, rather than the static mock field, so
-    // searching e.g. "blocked" finds the same projects those views
-    // currently show as blocked.
-    const health = getProjectHealth(project, tasks);
+    // Search the persisted project health so search matches the
+    // same value shown on the project card and health matrix.
+    const health = getProjectHealth(project);
 
     return (
       project.name

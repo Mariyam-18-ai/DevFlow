@@ -10,7 +10,7 @@ export interface FocusReason {
 export function getFocusReasons(
   task: Task,
   project?: Project,
-  allTasks: Task[] = []
+  _allTasks: Task[] = []
 ): FocusReason[] {
   const reasons: FocusReason[] = [];
 
@@ -50,12 +50,10 @@ export function getFocusReasons(
     });
   }
 
-  // Uses the same live, computed project health as ProjectCard and
-  // ProjectHealthMatrix (lib/projectHealth), not the static mock
-  // `project.health` field, so this reasoning can never disagree with
-  // what the Work/Insights pages are showing for the same project.
+  // Use the persisted project health returned by the API. Task data
+  // affects task scoring, but must not overwrite project.health.
   if (project) {
-    const health = getProjectHealth(project, allTasks);
+    const health = getProjectHealth(project);
     if (health !== "healthy") {
       reasons.push({
         label:
@@ -73,9 +71,9 @@ export function getFocusReasons(
 export function getFocusScore(
   task: Task,
   project?: Project,
-  allTasks: Task[] = []
+  _allTasks: Task[] = []
 ): number {
-  const score = getFocusReasons(task, project, allTasks).reduce(
+  const score = getFocusReasons(task, project, _allTasks).reduce(
     (total, reason) => total + reason.points,
     0
   );
