@@ -1,10 +1,11 @@
-import type { User } from "../../types";
+import type { User, Workspace } from "../../types";
 
 interface TodayHeaderProps {
   user: User;
   activeCount: number;
   blockedCount: number;
   dueTodayCount: number;
+  workspace: Workspace;
 }
 
 function getGreeting(): string {
@@ -27,13 +28,14 @@ export function TodayHeader({
   activeCount,
   blockedCount,
   dueTodayCount,
+  workspace,
 }: TodayHeaderProps) {
   const firstName = user.name.split(" ")[0];
 
   return (
     <section className="df-today-header">
       <div>
-        <span className="df-eyebrow">TODAY</span>
+        <span className="df-eyebrow">TODAY · {workspace.toUpperCase()}</span>
         <span className="df-today-date">{getFormattedDate()}</span>
         <h1>
           {getGreeting()}, {firstName}

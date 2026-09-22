@@ -7,6 +7,7 @@ export type {
 export type {
   Project,
   ProjectHealth,
+  Workspace,
 } from "./project";
 
 export type { User } from "./user";

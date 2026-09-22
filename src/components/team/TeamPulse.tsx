@@ -47,7 +47,7 @@ export function TeamPulse({
         <div className="df-section-heading">
           <div>
             <span className="df-eyebrow">TEAM PULSE</span>
-            <h2>Engineering workload, at a glance</h2>
+            <h2>Team workload, at a glance</h2>
           </div>
         </div>
 
@@ -71,7 +71,7 @@ export function TeamPulse({
       <div className="df-section-heading">
         <div>
           <span className="df-eyebrow">TEAM PULSE</span>
-          <h2>Engineering workload, at a glance</h2>
+          <h2>Team workload, at a glance</h2>
           <p>Who's carrying what right now — not a social feed, just capacity.</p>
         </div>
       </div>

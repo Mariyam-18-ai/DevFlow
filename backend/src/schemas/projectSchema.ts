@@ -6,6 +6,7 @@ export const projectInputSchema = z.object({
   ownerId: z.string().trim().min(1, "ownerId is required"),
   color: z.string().trim().min(1, "color is required"),
   health: z.enum(["healthy", "at-risk", "blocked"]),
+  workspace: z.enum(["Engineering", "Design", "Personal"]),
 });
 
 export type ProjectInput = z.infer<typeof projectInputSchema>;

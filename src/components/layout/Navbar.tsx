@@ -11,6 +11,7 @@ interface NavbarProps {
   projects: Project[];
   users: User[];
   currentUser: User | null;
+  notifications: Array<{ id: string; label: string; type: "task" | "project"; targetId: string }>;
 
   onNavigateToResult: (
     type: "task" | "project" | "person",
@@ -29,6 +30,7 @@ export function Navbar({
   projects,
   users,
   currentUser,
+  notifications,
   onNavigateToResult,
   onNavigate,
 }: NavbarProps) {
@@ -191,28 +193,38 @@ export function Navbar({
             }
           >
             <span aria-hidden="true">♢</span>
+            {notifications.length > 0 && (
+              <span className="df-notification-count" aria-label={`${notifications.length} notifications`}>
+                {notifications.length > 9 ? "9+" : notifications.length}
+              </span>
+            )}
           </button>
 
           {notificationsOpen && (
-            <div
-              className="df-notification-dropdown"
-              role="menu"
-            >
-              <strong>Notifications</strong>
+            <div className="df-notification-dropdown" role="menu">
+              <div className="df-notification-head">
+                <strong>Notifications</strong>
+                <span>{notifications.length ? `${notifications.length} live` : "All clear"}</span>
+              </div>
 
-              <button
-                type="button"
-                role="menuitem"
-              >
-                Billing Migration is at risk
-              </button>
-
-              <button
-                type="button"
-                role="menuitem"
-              >
-                2 tasks are due today
-              </button>
+              {notifications.length === 0 ? (
+                <div className="df-notification-empty">No current alerts for this workspace.</div>
+              ) : (
+                notifications.map((notification) => (
+                  <button
+                    key={notification.id}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setNotificationsOpen(false);
+                      onNavigateToResult(notification.type, notification.targetId, notification.label);
+                    }}
+                  >
+                    <span className="df-notification-dot" aria-hidden="true" />
+                    <span>{notification.label}</span>
+                  </button>
+                ))
+              )}
             </div>
           )}
         </div>
@@ -270,7 +282,7 @@ export function Navbar({
 
               <button
                 type="button"
-                onClick={() => setProfileOpen(false)}
+                onClick={() => { localStorage.removeItem("devflow_token"); window.location.reload(); }}
               >
                 Sign out
               </button>

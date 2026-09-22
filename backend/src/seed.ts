@@ -133,6 +133,7 @@ async function main() {
         ownerId: "u1",
         color: "amber",
         health: "healthy",
+        workspace: "Engineering",
       },
       {
         id: "p2",
@@ -142,6 +143,7 @@ async function main() {
         ownerId: "u3",
         color: "blue",
         health: "at_risk",
+        workspace: "Engineering",
       },
       {
         id: "p3",
@@ -151,6 +153,7 @@ async function main() {
         ownerId: "u4",
         color: "violet",
         health: "healthy",
+        workspace: "Design",
       },
       {
         id: "p4",
@@ -160,6 +163,7 @@ async function main() {
         ownerId: "u2",
         color: "emerald",
         health: "blocked",
+        workspace: "Engineering",
       },
     ],
   });

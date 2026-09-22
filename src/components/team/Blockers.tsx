@@ -9,6 +9,7 @@ interface BlockersProps {
   projects: Project[];
   users: User[];
   onInspectTask?: (taskId: string) => void;
+  onViewProject?: (projectId: string) => void;
 }
 
 /**
@@ -21,9 +22,13 @@ export function Blockers({
   projects,
   users,
   onInspectTask,
+  onViewProject,
 }: BlockersProps) {
   const blockedTasks = tasks.filter(
-    (task) => task.status === "blocked"
+    (task) =>
+      task.status === "blocked" &&
+      projects.some((project) => project.id === task.projectId) &&
+      users.some((user) => user.id === task.assigneeId)
   );
 
   return (
@@ -76,18 +81,28 @@ export function Blockers({
               </>
             );
 
-            return onInspectTask ? (
-              <button
-                type="button"
-                key={task.id}
-                className="df-team-task-row"
-                onClick={() => onInspectTask(task.id)}
-              >
-                {content}
-              </button>
-            ) : (
+            return (
               <div className="df-team-task-row" key={task.id}>
-                {content}
+                {onInspectTask ? (
+                  <button
+                    type="button"
+                    className="df-team-task-main"
+                    onClick={() => onInspectTask(task.id)}
+                  >
+                    {content}
+                  </button>
+                ) : (
+                  <div className="df-team-task-main">{content}</div>
+                )}
+                {project && onViewProject && (
+                  <button
+                    type="button"
+                    className="df-inline-action"
+                    onClick={() => onViewProject(project.id)}
+                  >
+                    Open project →
+                  </button>
+                )}
               </div>
             );
           })}

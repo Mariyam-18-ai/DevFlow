@@ -1,4 +1,4 @@
-import { AppError, User } from "../types/index.js";
+import { User } from "../types/index.js";
 import { prisma } from "../lib/prisma.js";
 
 export type CreateUserInput = Omit<User, "id">;
@@ -114,33 +114,43 @@ export const userRepository = {
   },
 
   async delete(id: string): Promise<boolean> {
-  const existing = await prisma.user.findUnique({
-    where: { id },
-  });
-
-  if (!existing) {
-    return false;
-  }
-
-  try {
-    await prisma.user.delete({
+    const existing = await prisma.user.findUnique({
       where: { id },
+      select: { id: true },
     });
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message.includes("Foreign key constraint")
-    ) {
-      throw new AppError(
-        "User cannot be deleted because it is still referenced by projects or tasks.",
-        409,
-        "USER_HAS_DEPENDENCIES"
-      );
+
+    if (!existing) {
+      return false;
     }
 
-    throw error;
-  }
+    // Keep the workspace consistent when a member is removed. Tasks assigned
+    // to the member and projects owned by the member cannot remain as hidden
+    // foreign-key records, so remove the dependent records in one transaction.
+    await prisma.$transaction(async (tx) => {
+      const ownedProjects = await tx.project.findMany({
+        where: { ownerId: id },
+        select: { id: true },
+      });
 
-  return true;
-},
-};
+      const ownedProjectIds = ownedProjects.map((project) => project.id);
+
+      if (ownedProjectIds.length > 0) {
+        await tx.task.deleteMany({
+          where: { projectId: { in: ownedProjectIds } },
+        });
+      }
+
+      await tx.task.deleteMany({ where: { assigneeId: id } });
+
+      if (ownedProjectIds.length > 0) {
+        await tx.project.deleteMany({
+          where: { id: { in: ownedProjectIds } },
+        });
+      }
+
+      await tx.user.delete({ where: { id } });
+    });
+
+    return true;
+  },
+}

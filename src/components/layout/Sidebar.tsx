@@ -1,4 +1,4 @@
-import type { User } from "../../types";
+import type { User, Workspace } from "../../types";
 import { DevFlowLogo } from "./DevFlowLogo";
 import { WORKSPACES } from "../../lib/workspaces";
 
@@ -7,8 +7,8 @@ interface SidebarProps {
   onPageChange: (page: string) => void;
   open: boolean;
   onClose: () => void;
-  workspace: string;
-  onWorkspaceChange: (workspace: string) => void;
+  workspace: Workspace;
+  onWorkspaceChange: (workspace: Workspace) => void;
   currentUser: User | null;
 }
 
@@ -78,7 +78,7 @@ export function Sidebar({
           <select
             aria-label="Switch workspace"
             value={workspace}
-            onChange={(event) => onWorkspaceChange(event.target.value)}
+            onChange={(event) => onWorkspaceChange(event.target.value as Workspace)}
           >
             {WORKSPACES.map((option) => (
               <option key={option} value={option}>

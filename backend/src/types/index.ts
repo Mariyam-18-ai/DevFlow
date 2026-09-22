@@ -41,6 +41,7 @@ export interface Project {
   ownerId: string;
   color: string;
   health: "healthy" | "at-risk" | "blocked";
+  workspace: "Engineering" | "Design" | "Personal";
 }
 
 export interface Task {

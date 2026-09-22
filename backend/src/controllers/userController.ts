@@ -4,12 +4,13 @@ import { userInputSchema } from "../schemas/userSchema.js";
 
 export const userController = {
   async getAll(
-    _req: Request,
+    req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> {
     try {
       const users = await userService.getAll();
+      if (req.userId) users.sort((a, b) => Number(b.id === req.userId) - Number(a.id === req.userId));
       res.status(200).json({
         success: true,
         data: users,

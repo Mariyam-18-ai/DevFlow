@@ -5,6 +5,7 @@ import type {
   Task,
   TaskStatus,
   User,
+  Workspace,
 } from "../types";
 import { mockActivity } from "../data/mockActivity";
 import { FocusCard } from "../components/dashboard/FocusCard";
@@ -13,6 +14,8 @@ import { FlowMap } from "../components/dashboard/FlowMap";
 import { FocusMode } from "../components/dashboard/FocusMode";
 import { TodayHeader } from "../components/dashboard/TodayHeader";
 import { ActivityFeed } from "../components/dashboard/ActivityFeed";
+import { AIWorkIntelligence } from "../components/dashboard/AIWorkIntelligence";
+import { AITaskGenerator } from "../components/dashboard/AITaskGenerator";
 import { WorkOverview } from "../components/projects/WorkOverview";
 import { TeamPulse } from "../components/team/TeamPulse";
 import { WorkloadChart } from "../components/team/WorkloadChart";
@@ -25,7 +28,7 @@ import { ErrorState } from "../components/ui/ErrorState";
 import { TaskList } from "../components/tasks/TaskList";
 import { searchProjects, searchTasks } from "../lib/search";
 import { getBestNextTask, getTodayTasks } from "../lib/focusScore";
-import { useDashboardData, type DashboardData } from "../hooks/useDashboardData";
+import type { DashboardData, DashboardStatus } from "../hooks/useDashboardData";
 import { api } from "../lib/api";
 import { ManagementModal } from "../components/ui/ManagementModal";
 import { getLocalDateInputValue, isDueToday } from "../lib/dateUtils";
@@ -39,7 +42,7 @@ export type ActivePage = "today" | "work" | "team" | "insights";
 interface DashboardProps {
   searchQuery: string;
   activePage: ActivePage;
-  workspace: string;
+  workspace: Workspace;
   onNavigate: (page: ActivePage) => void;
   onTasksChange?: (tasks: Task[]) => void;
   onDataChange?: (data: DashboardData) => void;
@@ -47,6 +50,10 @@ interface DashboardProps {
     type: "task" | "project" | "person";
     id: string;
   } | null;
+  currentUserId?: string | null;
+  dashboardData: DashboardData;
+  dashboardStatus: DashboardStatus;
+  onRetryDashboard: () => void;
 }
 
 const PAGE_COPY: Record<
@@ -90,6 +97,7 @@ const emptyProject = {
   ownerId: "",
   color: "#f59e0b",
   health: "healthy" as Project["health"],
+  workspace: "Engineering" as Workspace,
 };
 
 const emptyTask = {
@@ -112,14 +120,30 @@ export function Dashboard({
   onTasksChange,
   onDataChange,
   searchTarget,
+  currentUserId,
+  dashboardData,
+  dashboardStatus,
+  onRetryDashboard,
 }: DashboardProps) {
-  const { status, retry, data } = useDashboardData();
+  const status = dashboardStatus;
+  const data = dashboardData;
 
   const [users, setUsers] = useState<User[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
 
-  const currentUser = users[0];
+  const currentUser = users.find((user) => user.id === currentUserId) ?? null;
+
+  useEffect(() => {
+    if (status !== "success" || !currentUserId || activePage !== "work") return;
+    const savedProjectId = localStorage.getItem(`devflow_project_${currentUserId}`);
+    if (!savedProjectId) return;
+    if (projects.some((project) => project.id === savedProjectId && project.workspace === workspace)) {
+      setSelectedProjectId(savedProjectId);
+    } else {
+      localStorage.removeItem(`devflow_project_${currentUserId}`);
+    }
+  }, [status, currentUserId, activePage, projects, workspace]);
 
   const [activity, setActivity] =
     useState<Activity[]>(mockActivity);
@@ -135,6 +159,12 @@ export function Dashboard({
     useState<string | null>(null);
 
   const [highlightedProjectId, setHighlightedProjectId] =
+    useState<string | null>(null);
+
+  const [selectedProjectId, setSelectedProjectId] =
+    useState<string | null>(null);
+
+  const [inspectedTaskId, setInspectedTaskId] =
     useState<string | null>(null);
 
   /*
@@ -171,19 +201,15 @@ export function Dashboard({
     }
   }, [status, data.users, data.projects, data.tasks]);
 
-  useEffect(() => {
-    onTasksChange?.(tasks);
-  }, [tasks, onTasksChange]);
-
-  useEffect(() => {
-    if (status !== "success") return;
-
+  function syncAppData(nextUsers: User[], nextProjects: Project[], nextTasks: Task[]) {
+    onTasksChange?.(nextTasks);
     onDataChange?.({
-      users,
-      projects,
-      tasks,
+      users: nextUsers,
+      projects: nextProjects,
+      tasks: nextTasks,
     });
-  }, [status, users, projects, tasks, onDataChange]);
+  }
+
 
   /*
    * Search navigation.
@@ -206,23 +232,7 @@ export function Dashboard({
       }
 
       if (searchTarget.type === "project") {
-        if (activePage !== "work") {
-          onNavigate("work");
-        }
-
-        setHighlightedProjectId(searchTarget.id);
-        document
-          .getElementById(`project-${searchTarget.id}`)
-          ?.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-          });
-
-        window.setTimeout(() => {
-          setHighlightedProjectId((current) =>
-            current === searchTarget.id ? null : current
-          );
-        }, 1700);
+        handleViewProject(searchTarget.id);
         return;
       }
 
@@ -234,14 +244,29 @@ export function Dashboard({
     return () => window.clearTimeout(timer);
   }, [searchTarget, onNavigate]);
 
+  const workspaceProjects = useMemo(
+    () => projects.filter((project) => project.workspace === workspace),
+    [projects, workspace]
+  );
+
+  const workspaceTasks = useMemo(
+    () => tasks.filter((task) => workspaceProjects.some((project) => project.id === task.projectId)),
+    [tasks, workspaceProjects]
+  );
+
+  const myTasks = useMemo(
+    () => currentUser ? workspaceTasks.filter((task) => task.assigneeId === currentUser.id) : [],
+    [workspaceTasks, currentUser]
+  );
+
   const filteredProjects = useMemo(
-    () => searchProjects(projects, searchQuery, tasks),
-    [searchQuery, tasks, projects]
+    () => searchProjects(workspaceProjects, searchQuery, workspaceTasks),
+    [searchQuery, workspaceTasks, workspaceProjects]
   );
 
   const searchedTasks = useMemo(
-    () => searchTasks(tasks, searchQuery, users),
-    [tasks, searchQuery, users]
+    () => searchTasks(workspaceTasks, searchQuery, users),
+    [workspaceTasks, searchQuery, users]
   );
 
   const searchedUsers = useMemo(
@@ -256,26 +281,78 @@ export function Dashboard({
     [searchQuery, users]
   );
 
-  const bestNextTask = getBestNextTask(tasks, projects);
+  const selectedProject = selectedProjectId
+    ? projects.find((project) => project.id === selectedProjectId) ?? null
+    : null;
+
+  const selectedProjectTasks = selectedProject
+    ? tasks.filter((task) => task.projectId === selectedProject.id)
+    : [];
+
+  const inspectedTask = inspectedTaskId
+    ? tasks.find((task) => task.id === inspectedTaskId) ?? null
+    : null;
+
+  const inspectedTaskProject = inspectedTask
+    ? projects.find((project) => project.id === inspectedTask.projectId)
+    : undefined;
+
+  const inspectedTaskAssignee = inspectedTask
+    ? users.find((user) => user.id === inspectedTask.assigneeId)
+    : undefined;
+
+  // Never keep UI selections pointing at records that were deleted or
+  // moved out of the active workspace. This prevents ghost project/task
+  // details from surviving a CRUD action.
+  useEffect(() => {
+    if (selectedProjectId && !workspaceProjects.some((project) => project.id === selectedProjectId)) {
+      setSelectedProjectId(null);
+    }
+
+    if (inspectedTaskId && !workspaceTasks.some((task) => task.id === inspectedTaskId)) {
+      setInspectedTaskId(null);
+    }
+
+    if (flowSelectedTaskId && !workspaceTasks.some((task) => task.id === flowSelectedTaskId)) {
+      setFlowSelectedTaskId(null);
+    }
+
+    if (focusTaskId && !myTasks.some((task) => task.id === focusTaskId)) {
+      setFocusTaskId(null);
+    }
+  }, [selectedProjectId, inspectedTaskId, flowSelectedTaskId, focusTaskId, workspaceProjects, workspaceTasks, myTasks]);
+
+  useEffect(() => {
+    if (activePage !== "work" || !selectedProjectId || !selectedProject) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(`project-detail-${selectedProject.id}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activePage, selectedProjectId, selectedProject]);
+
+  const bestNextTask = getBestNextTask(myTasks, workspaceProjects);
 
   const bestNextProject = bestNextTask
-    ? projects.find(
+    ? workspaceProjects.find(
         (project) => project.id === bestNextTask.projectId
       )
     : undefined;
 
   const todayTasks = getTodayTasks(
-    tasks,
-    projects,
+    myTasks,
+    workspaceProjects,
     bestNextTask?.id ?? null
   );
 
   const focusTask = focusTaskId
-    ? tasks.find((task) => task.id === focusTaskId) ?? null
+    ? myTasks.find((task) => task.id === focusTaskId) ?? null
     : null;
 
   const focusProject = focusTask
-    ? projects.find(
+    ? workspaceProjects.find(
         (project) => project.id === focusTask.projectId
       )
     : undefined;
@@ -311,11 +388,11 @@ export function Dashboard({
         nextStatus
       )) as Task;
 
-      setTasks((currentTasks) =>
-        currentTasks.map((task) =>
-          task.id === taskId ? updatedTask : task
-        )
+      const nextTasks = tasks.map((task) =>
+        task.id === taskId ? updatedTask : task
       );
+      setTasks(nextTasks);
+      syncAppData(users, projects, nextTasks);
     } catch (error) {
       console.error(
         "Failed to update task status:",
@@ -376,6 +453,20 @@ export function Dashboard({
    * NAVIGATION
    */
   function handleInspectTask(taskId: string) {
+    setInspectedTaskId(taskId);
+
+    const task = tasks.find((item) => item.id === taskId);
+
+    // Team blockers may belong to another developer. Keep them in
+    // the team context instead of sending them to the current user's
+    // personal task view.
+    if (activePage === "team" || (task && task.assigneeId !== currentUser?.id)) {
+      if (activePage !== "team") {
+        onNavigate("team");
+      }
+      return;
+    }
+
     const needsNavigate = activePage !== "today";
 
     if (needsNavigate) {
@@ -398,20 +489,22 @@ export function Dashboard({
   }
 
   function handleViewProject(projectId: string) {
+    const project = projects.find((item) => item.id === projectId);
+    if (!project || !workspaceProjects.some((item) => item.id === projectId)) {
+      setManagementMessage("That project is no longer available in this workspace.");
+      return;
+    }
+
+    setInspectedTaskId(null);
+    setSelectedProjectId(projectId);
+    if (currentUserId) {
+      localStorage.setItem(`devflow_project_${currentUserId}`, projectId);
+    }
     setHighlightedProjectId(projectId);
 
     if (activePage !== "work") {
       onNavigate("work");
     }
-
-    window.setTimeout(() => {
-      document
-        .getElementById(`project-${projectId}`)
-        ?.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-    }, 60);
 
     window.setTimeout(() => {
       setHighlightedProjectId((current) =>
@@ -446,15 +539,16 @@ export function Dashboard({
     if (mode === "project") {
       setProjectForm({
         ...emptyProject,
-        ownerId: users[0]?.id ?? "",
+        ownerId: currentUser?.id ?? "",
+        workspace,
       });
     }
 
     if (mode === "task") {
       setTaskForm({
         ...emptyTask,
-        projectId: projects[0]?.id ?? "",
-        assigneeId: users[0]?.id ?? "",
+        projectId: workspaceProjects[0]?.id ?? "",
+        assigneeId: currentUser?.id ?? users[0]?.id ?? "",
       });
     }
   }
@@ -483,7 +577,42 @@ export function Dashboard({
       ownerId: project.ownerId,
       color: project.color,
       health: project.health,
+      workspace: project.workspace,
     });
+  }
+
+  function useGeneratedTask(suggestion: {
+    title: string;
+    description: string;
+    priority: Task["priority"];
+    estimatedHours: number;
+    blocking: boolean;
+    suggestedDays: number;
+  }) {
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + suggestion.suggestedDays);
+
+    const projectId = selectedProject?.id ?? taskForm.projectId;
+    if (!projectId) {
+      setManagementMessage("Select a project before using an AI suggestion.");
+      return;
+    }
+
+    setEditingId(null);
+    setManagementMode("task");
+    setTaskForm((current) => ({
+      ...current,
+      projectId,
+      assigneeId: current.assigneeId || currentUser?.id || users[0]?.id || "",
+      title: suggestion.title,
+      description: suggestion.description,
+      priority: suggestion.priority,
+      estimatedHours: suggestion.estimatedHours,
+      blocking: suggestion.blocking,
+      dueDate: dueDate.toISOString().slice(0, 10),
+    }));
+    setManagementOpen(true);
+    setManagementMessage("AI suggestion loaded. Review it and create the task when ready.");
   }
 
   function editTask(task: Task) {
@@ -518,11 +647,11 @@ export function Dashboard({
             userForm
           )) as User;
 
-          setUsers((current) =>
-            current.map((user) =>
-              user.id === updated.id ? updated : user
-            )
+          const nextUsers = users.map((user) =>
+            user.id === updated.id ? updated : user
           );
+          setUsers(nextUsers);
+          syncAppData(nextUsers, projects, tasks);
 
           setManagementMessage("Team member updated.");
         } else {
@@ -530,7 +659,9 @@ export function Dashboard({
             userForm
           )) as User;
 
-          setUsers((current) => [...current, created]);
+          const nextUsers = [...users, created];
+          setUsers(nextUsers);
+          syncAppData(nextUsers, projects, tasks);
 
           setManagementMessage("Team member created.");
         }
@@ -543,13 +674,11 @@ export function Dashboard({
             projectForm
           )) as Project;
 
-          setProjects((current) =>
-            current.map((project) =>
-              project.id === updated.id
-                ? updated
-                : project
-            )
+          const nextProjects = projects.map((project) =>
+            project.id === updated.id ? updated : project
           );
+          setProjects(nextProjects);
+          syncAppData(users, nextProjects, tasks);
 
           setManagementMessage("Project updated.");
         } else {
@@ -557,10 +686,9 @@ export function Dashboard({
             projectForm
           )) as Project;
 
-          setProjects((current) => [
-            ...current,
-            created,
-          ]);
+          const nextProjects = [...projects, created];
+          setProjects(nextProjects);
+          syncAppData(users, nextProjects, tasks);
 
           setManagementMessage("Project created.");
         }
@@ -573,11 +701,11 @@ export function Dashboard({
             taskForm
           )) as Task;
 
-          setTasks((current) =>
-            current.map((task) =>
-              task.id === updated.id ? updated : task
-            )
+          const nextTasks = tasks.map((task) =>
+            task.id === updated.id ? updated : task
           );
+          setTasks(nextTasks);
+          syncAppData(users, projects, nextTasks);
 
           setManagementMessage("Task updated.");
         } else {
@@ -585,10 +713,9 @@ export function Dashboard({
             taskForm
           )) as Task;
 
-          setTasks((current) => [
-            ...current,
-            created,
-          ]);
+          const nextTasks = [...tasks, created];
+          setTasks(nextTasks);
+          syncAppData(users, projects, nextTasks);
 
           setManagementMessage("Task created.");
         }
@@ -608,10 +735,7 @@ export function Dashboard({
     }
   }
 
-  async function handleDelete(
-    mode: ManagementMode,
-    id: string
-  ) {
+  async function handleDelete(mode: ManagementMode, id: string) {
     const confirmed = window.confirm(
       "Delete this item? This action cannot be undone."
     );
@@ -619,33 +743,52 @@ export function Dashboard({
     if (!confirmed) return;
 
     try {
-      if (mode === "user") {
-        await api.users.delete(id);
-
-        setUsers((current) =>
-          current.filter((user) => user.id !== id)
-        );
+      if (mode === "task") {
+        await api.tasks.delete(id);
+        const nextTasks = tasks.filter((task) => task.id !== id);
+        setTasks(nextTasks);
+        syncAppData(users, projects, nextTasks);
+        if (inspectedTaskId === id) setInspectedTaskId(null);
+        if (flowSelectedTaskId === id) setFlowSelectedTaskId(null);
+        if (focusTaskId === id) setFocusTaskId(null);
       }
 
       if (mode === "project") {
         await api.projects.delete(id);
-
-        setProjects((current) =>
-          current.filter(
-            (project) => project.id !== id
-          )
-        );
+        const nextProjects = projects.filter((project) => project.id !== id);
+        const nextTasks = tasks.filter((task) => task.projectId !== id);
+        setProjects(nextProjects);
+        setTasks(nextTasks);
+        syncAppData(users, nextProjects, nextTasks);
+        if (selectedProjectId === id) {
+          setSelectedProjectId(null);
+          if (currentUserId) localStorage.removeItem(`devflow_project_${currentUserId}`);
+        }
+        if (highlightedProjectId === id) setHighlightedProjectId(null);
       }
 
-      if (mode === "task") {
-        await api.tasks.delete(id);
-
-        setTasks((current) =>
-          current.filter((task) => task.id !== id)
+      if (mode === "user") {
+        await api.users.delete(id);
+        const ownedProjectIds = new Set(
+          projects.filter((project) => project.ownerId === id).map((project) => project.id)
         );
+        const nextUsers = users.filter((user) => user.id !== id);
+        const nextProjects = projects.filter((project) => project.ownerId !== id);
+        const nextTasks = tasks.filter(
+          (task) => task.assigneeId !== id && !ownedProjectIds.has(task.projectId)
+        );
+        setUsers(nextUsers);
+        setProjects(nextProjects);
+        setTasks(nextTasks);
+        syncAppData(nextUsers, nextProjects, nextTasks);
+        if (currentUserId === id) {
+          localStorage.removeItem("devflow_token");
+          window.location.reload();
+          return;
+        }
       }
 
-      setManagementMessage("Deleted successfully.");
+      setManagementMessage("Deleted successfully. Related records were removed from the workspace.");
     } catch (error) {
       setManagementMessage(
         error instanceof Error
@@ -803,6 +946,23 @@ export function Dashboard({
               </label>
 
               <label>
+                Workspace
+                <select
+                  value={projectForm.workspace}
+                  onChange={(event) =>
+                    setProjectForm({
+                      ...projectForm,
+                      workspace: event.target.value as Workspace,
+                    })
+                  }
+                >
+                  <option value="Engineering">Engineering</option>
+                  <option value="Design">Design</option>
+                  <option value="Personal">Personal</option>
+                </select>
+              </label>
+
+              <label>
                 Health
                 <select
                   value={projectForm.health}
@@ -889,7 +1049,7 @@ export function Dashboard({
                     Select project
                   </option>
 
-                  {projects.map((project) => (
+                  {workspaceProjects.map((project) => (
                     <option
                       key={project.id}
                       value={project.id}
@@ -899,6 +1059,7 @@ export function Dashboard({
                   ))}
                 </select>
               </label>
+
 
               <label>
                 Assignee
@@ -1033,15 +1194,15 @@ export function Dashboard({
     );
   }
 
-  const activeCount = tasks.filter(
+  const activeCount = myTasks.filter(
     (task) => task.status !== "done"
   ).length;
 
-  const blockedCount = tasks.filter(
+  const blockedCount = myTasks.filter(
     (task) => task.status === "blocked"
   ).length;
 
-  const dueTodayCount = tasks.filter(
+  const dueTodayCount = myTasks.filter(
     (task) =>
       isDueToday(task.dueDate) &&
       task.status !== "done"
@@ -1059,8 +1220,8 @@ export function Dashboard({
           ? `${workspace.toUpperCase()} · ${pageCopy.eyebrow}`
           : undefined
       }
-      title={pageCopy?.title}
-      description={pageCopy?.description}
+      title={!selectedProject ? pageCopy?.title : undefined}
+      description={!selectedProject ? pageCopy?.description : undefined}
     >
       <div className="df-dashboard">
         {activePage === "today" && currentUser && (
@@ -1069,6 +1230,7 @@ export function Dashboard({
             activeCount={activeCount}
             blockedCount={blockedCount}
             dueTodayCount={dueTodayCount}
+            workspace={workspace}
           />
         )}
 
@@ -1083,38 +1245,34 @@ export function Dashboard({
         )}
 
         {status === "error" && (
-          <ErrorState onRetry={retry} />
+          <ErrorState onRetry={onRetryDashboard} />
         )}
 
         {status === "success" &&
           activePage === "today" && (
             <>
-              <div className="df-page-action-row">
-                <button type="button" className="df-primary-button" onClick={() => openCreate("task")}>
-                  + Add task
-                </button>
-              </div>
+              
 
               <div id="next-best-action">
                 <FocusCard
                   task={bestNextTask}
                   project={bestNextProject}
-                  allTasks={tasks}
+                  allTasks={myTasks}
                   onStartFocus={handleStartFocus}
                   onViewProject={handleViewProject}
                 />
               </div>
 
               <FocusRail
-                tasks={tasks}
-                projects={projects}
+                tasks={myTasks}
+                projects={workspaceProjects}
                 onTaskClick={handleInspectTask}
               />
 
               <div id="today-flow-map">
                 <FlowMap
-                  tasks={tasks}
-                  projects={projects}
+                  tasks={myTasks}
+                  projects={workspaceProjects}
                   users={users}
                   selectedTaskId={
                     flowSelectedTaskId
@@ -1133,6 +1291,8 @@ export function Dashboard({
                   }
                 />
               </div>
+
+              <AIWorkIntelligence workspace={workspace} />
 
               <section className="df-work-section">
                 <div className="df-section-heading df-section-heading-row">
@@ -1156,8 +1316,8 @@ export function Dashboard({
 
                 <TaskList
                   tasks={todayTasks}
-                  allTasks={tasks}
-                  projects={projects}
+                  allTasks={myTasks}
+                  projects={workspaceProjects}
                   onToggle={handleToggleTask}
                   onFocus={handleStartFocus}
                   onEdit={editTask}
@@ -1171,36 +1331,250 @@ export function Dashboard({
             </>
           )}
 
-        {status === "success" &&
-          activePage === "work" && (
-            <>
-              <div className="df-page-action-row">
-                <button type="button" className="df-primary-button" onClick={() => openCreate("project")}>
-                  + New project
-                </button>
-              </div>
+        {status === "success" && activePage === "work" && selectedProject && (
+              <section className="df-project-workspace" aria-label="Project workspace">
+                <div className="df-project-workspace-toolbar">
+                  <button
+                    type="button"
+                    className="df-back-button"
+                    onClick={() => {
+                      setSelectedProjectId(null);
+                      setInspectedTaskId(null);
+                      if (currentUserId) localStorage.removeItem(`devflow_project_${currentUserId}`);
+                    }}
+                  >
+                    ← All projects
+                  </button>
+                  <div className="df-project-workspace-actions">
+                    <button
+                      type="button"
+                      className="df-secondary-button"
+                      onClick={() => editProject(selectedProject)}
+                    >
+                      Edit project
+                    </button>
+                    <button
+                      type="button"
+                      className="df-primary-button"
+                      onClick={() => openCreate("task")}
+                    >
+                      + Add task
+                    </button>
+                  </div>
+                </div>
 
-              <WorkOverview
-                projects={filteredProjects}
-                tasks={searchedTasks}
-                allTasks={tasks}
-                filters={filters}
-                onFiltersChange={setFilters}
-                onTaskToggle={handleToggleTask}
-                onTaskFocus={handleStartFocus}
-                onProjectClick={
-                  handleViewProject
-                }
-                highlightedProjectId={
-                  highlightedProjectId
-                }
-                onEditProject={editProject}
-                onDeleteProject={(id) => handleDelete("project", id)}
-                onEditTask={editTask}
-                onDeleteTask={(id) => handleDelete("task", id)}
-              />
-            </>
-          )}
+                <div
+                  id={`project-detail-${selectedProject.id}`}
+                  className="df-project-hero"
+                >
+                  <div className="df-project-hero-main">
+                    <span className="df-eyebrow">
+                      {selectedProject.workspace.toUpperCase()} · PROJECT
+                    </span>
+                    <h2>{selectedProject.name}</h2>
+                    <p>
+                      {selectedProject.description ||
+                        "No project description yet."}
+                    </p>
+                    <div className="df-project-hero-meta">
+                      <span>
+                        Owner: {users.find((user) => user.id === selectedProject.ownerId)?.name ?? "Unassigned"}
+                      </span>
+                      <span>
+                        Health: {selectedProject.health === "at-risk" ? "At risk" : selectedProject.health}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="df-project-progress-card">
+                    <span>PROJECT PROGRESS</span>
+                    <strong>
+                      {selectedProjectTasks.length
+                        ? Math.round(
+                            (selectedProjectTasks.filter(
+                              (task) => task.status === "done"
+                            ).length /
+                              selectedProjectTasks.length) *
+                              100
+                          )
+                        : 0}%
+                    </strong>
+                    <small>
+                      {selectedProjectTasks.filter(
+                        (task) => task.status === "done"
+                      ).length} of {selectedProjectTasks.length} tasks complete
+                    </small>
+                  </div>
+                </div>
+
+                <div className="df-project-stat-grid">
+                  <div>
+                    <span>Total</span>
+                    <strong>{selectedProjectTasks.length}</strong>
+                  </div>
+                  <div>
+                    <span>Active</span>
+                    <strong>
+                      {selectedProjectTasks.filter(
+                        (task) => task.status !== "done"
+                      ).length}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Blocked</span>
+                    <strong>
+                      {selectedProjectTasks.filter(
+                        (task) => task.status === "blocked"
+                      ).length}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Completed</span>
+                    <strong>
+                      {selectedProjectTasks.filter(
+                        (task) => task.status === "done"
+                      ).length}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="df-project-content-grid">
+                  <section className="df-project-task-panel">
+                    <div className="df-section-heading df-section-heading-row">
+                      <div>
+                        <span className="df-eyebrow">PROJECT TASKS</span>
+                        <h3>Work inside this project</h3>
+                      </div>
+                    </div>
+
+                    {selectedProjectTasks.length === 0 ? (
+                      <p className="df-flow-empty">
+                        No tasks yet. Add a task or use DevFlow AI to generate a starting plan.
+                      </p>
+                    ) : (
+                      <div className="df-project-task-list">
+                        {selectedProjectTasks.map((task) => {
+                          const assignee = users.find(
+                            (user) => user.id === task.assigneeId
+                          );
+                          const isInspected = inspectedTaskId === task.id;
+
+                          return (
+                            <div
+                              key={task.id}
+                              className={`df-project-task-item ${
+                                isInspected ? "is-selected" : ""
+                              }`}
+                            >
+                              <button
+                                type="button"
+                                className="df-project-task-main"
+                                onClick={() =>
+                                  setInspectedTaskId(
+                                    isInspected ? null : task.id
+                                  )
+                                }
+                              >
+                                <strong>{task.title}</strong>
+                                <span>
+                                  {assignee?.name ?? "Unassigned"} · {task.status} · {task.priority} · Due {task.dueDate}
+                                </span>
+                              </button>
+
+                              <div className="df-project-task-actions">
+                                <button
+                                  type="button"
+                                  className="df-inline-button"
+                                  onClick={() => editTask(task)}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  className="df-inline-button is-danger"
+                                  onClick={() => handleDelete("task", task.id)}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+
+                              {isInspected && (
+                                <div className="df-project-task-detail">
+                                  <p>
+                                    {task.description ||
+                                      "No additional description."}
+                                  </p>
+                                  <div className="df-project-task-detail-grid">
+                                    <span>
+                                      Assignee <strong>{assignee?.name ?? "Unassigned"}</strong>
+                                    </span>
+                                    <span>
+                                      Status <strong>{task.status}</strong>
+                                    </span>
+                                    <span>
+                                      Priority <strong>{task.priority}</strong>
+                                    </span>
+                                    <span>
+                                      Estimate <strong>{task.estimatedHours}h</strong>
+                                    </span>
+                                    <span>
+                                      Blocking <strong>{task.blocking ? "Yes" : "No"}</strong>
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </section>
+
+                  <aside className="df-project-ai-panel">
+                    <div>
+                      <span className="df-eyebrow">DEVFLOW AI</span>
+                      <h3>Plan the next steps</h3>
+                      <p>
+                        Generate project-specific task suggestions, review them, and create only the work you approve.
+                      </p>
+                    </div>
+                    <AITaskGenerator
+                      project={selectedProject}
+                      onUseSuggestion={useGeneratedTask}
+                    />
+                  </aside>
+                </div>
+              </section>
+        )}
+
+        {status === "success" && activePage === "work" && !selectedProject && (
+              <>
+                <div className="df-page-action-row">
+                  <button
+                    type="button"
+                    className="df-primary-button"
+                    onClick={() => openCreate("project")}
+                  >
+                    + New project
+                  </button>
+                </div>
+                <WorkOverview
+                  projects={filteredProjects}
+                  tasks={searchedTasks}
+                  allTasks={workspaceTasks}
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                  onTaskToggle={handleToggleTask}
+                  onTaskFocus={handleStartFocus}
+                  onProjectClick={handleViewProject}
+                  highlightedProjectId={highlightedProjectId}
+                  onEditProject={editProject}
+                  onDeleteProject={(id) => handleDelete("project", id)}
+                  onEditTask={editTask}
+                  onDeleteTask={(id) => handleDelete("task", id)}
+                />
+              </>
+        )}
 
         {status === "success" &&
           activePage === "team" && (
@@ -1211,10 +1585,79 @@ export function Dashboard({
                 </button>
               </div>
 
+              {inspectedTask && (
+                <section className="df-flow-detail" aria-label="Task details">
+                  <div className="df-flow-detail-head">
+                    <div>
+                      <span className="df-eyebrow">TASK DETAIL</span>
+                      <h3>{inspectedTask.title}</h3>
+                      <p>{inspectedTask.description || "No additional description."}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="df-flow-detail-close"
+                      onClick={() => setInspectedTaskId(null)}
+                      aria-label="Close task details"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="df-flow-detail-grid">
+                    <div>
+                      <span>Assignee</span>
+                      <strong>{inspectedTaskAssignee?.name ?? "Unassigned"}</strong>
+                    </div>
+                    <div>
+                      <span>Project</span>
+                      <strong>{inspectedTaskProject?.name ?? "No project"}</strong>
+                    </div>
+                    <div>
+                      <span>Status</span>
+                      <strong>{inspectedTask.status}</strong>
+                    </div>
+                    <div>
+                      <span>Priority</span>
+                      <strong>{inspectedTask.priority}</strong>
+                    </div>
+                    <div>
+                      <span>Due</span>
+                      <strong>{inspectedTask.dueDate}</strong>
+                    </div>
+                    <div>
+                      <span>Estimated</span>
+                      <strong>{inspectedTask.estimatedHours}h</strong>
+                    </div>
+                  </div>
+
+                  <div className="df-page-action-row">
+                    {inspectedTaskProject && (
+                      <button
+                        type="button"
+                        className="df-secondary-button"
+                        onClick={() => {
+                          setInspectedTaskId(null);
+                          handleViewProject(inspectedTaskProject.id);
+                        }}
+                      >
+                        Open project
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="df-secondary-button"
+                      onClick={() => editTask(inspectedTask)}
+                    >
+                      Edit task
+                    </button>
+                  </div>
+                </section>
+              )}
+
               <TeamPulse
                 users={searchedUsers}
-                tasks={tasks}
-                projects={projects}
+                tasks={workspaceTasks}
+                projects={workspaceProjects}
                 focusUserId={
                   searchTarget?.type === "person"
                     ? searchTarget.id
@@ -1229,16 +1672,17 @@ export function Dashboard({
 
               <WorkloadChart
                 users={searchedUsers}
-                tasks={tasks}
+                tasks={workspaceTasks}
               />
 
               <Blockers
-                tasks={tasks}
-                projects={projects}
+                tasks={workspaceTasks}
+                projects={workspaceProjects}
                 users={users}
                 onInspectTask={
                   handleInspectTask
                 }
+                onViewProject={handleViewProject}
               />
             </>
           )}
@@ -1246,16 +1690,16 @@ export function Dashboard({
         {status === "success" &&
           activePage === "insights" && (
             <>
-              <FlowVelocity tasks={tasks} />
+              <FlowVelocity tasks={workspaceTasks} />
 
               <WorkloadChart
                 users={users}
-                tasks={tasks}
+                tasks={workspaceTasks}
               />
 
               <ProjectHealthMatrix
-                projects={projects}
-                tasks={tasks}
+                projects={workspaceProjects}
+                tasks={workspaceTasks}
               />
             </>
           )}

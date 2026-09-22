@@ -18,10 +18,12 @@ async function apiRequest<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
+  const token = localStorage.getItem("devflow_token");
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options?.headers || {}),
     },
   });
@@ -43,6 +45,32 @@ async function apiRequest<T>(
 }
 
 export const api = {
+  auth: {
+    register: (data: { name: string; email: string; password: string; role?: string }) =>
+      apiRequest<{ token: string; user: { id: string; name: string; role: string; initials: string } }>("/auth/register", { method: "POST", body: JSON.stringify(data) }),
+    login: (data: { email: string; password: string }) =>
+      apiRequest<{ token: string; user: { id: string; name: string; role: string; initials: string } }>("/auth/login", { method: "POST", body: JSON.stringify(data) }),
+    me: () => apiRequest<{ id: string; name: string; role: string; initials: string }>("/auth/me"),
+  },
+  ai: {
+    workIntelligence: (workspace?: string) => apiRequest<{ headline: string; taskId?: string; whyNow: string[]; recommendation: string; risk: string; source?: "gemini" | "devflow-engine"; workspace?: string }>(`/ai/work-intelligence${workspace ? `?workspace=${encodeURIComponent(workspace)}` : ""}`),
+    generateTasks: (projectId: string, brief?: string) =>
+      apiRequest<{
+        project: { id: string; name: string; description: string };
+        suggestions: Array<{
+          title: string;
+          description: string;
+          priority: "high" | "medium" | "low";
+          estimatedHours: number;
+          blocking: boolean;
+          suggestedDays: number;
+        }>;
+        source: "gemini" | "devflow-engine";
+      }>("/ai/generate-tasks", {
+        method: "POST",
+        body: JSON.stringify({ projectId, brief: brief?.trim() || undefined }),
+      }),
+  },
   users: {
     getAll: () => apiRequest("/users"),
 
@@ -92,6 +120,7 @@ export const api = {
       ownerId: string;
       color: string;
       health: "healthy" | "at-risk" | "blocked";
+      workspace: "Engineering" | "Design" | "Personal";
     }) =>
       apiRequest("/projects", {
         method: "POST",
@@ -106,6 +135,7 @@ export const api = {
         ownerId: string;
         color: string;
         health: "healthy" | "at-risk" | "blocked";
+        workspace: "Engineering" | "Design" | "Personal";
       }
     ) =>
       apiRequest(`/projects/${id}`, {

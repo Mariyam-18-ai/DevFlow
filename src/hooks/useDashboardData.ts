@@ -10,7 +10,16 @@ export interface DashboardData {
   tasks: Task[];
 }
 
-export function useDashboardData() {
+interface UseDashboardDataResult {
+  data: DashboardData;
+  status: DashboardStatus;
+  error: string | null;
+  retry: () => void;
+}
+
+export function useDashboardData(
+  enabled = true
+): UseDashboardDataResult {
   const [status, setStatus] =
     useState<DashboardStatus>("loading");
 
@@ -23,16 +32,19 @@ export function useDashboardData() {
   const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
+    if (!enabled) {
+      return;
+    }
+
     setStatus("loading");
     setError(null);
 
     try {
-      const [users, projects, tasks] =
-        await Promise.all([
-          api.users.getAll(),
-          api.projects.getAll(),
-          api.tasks.getAll(),
-        ]);
+      const [users, projects, tasks] = await Promise.all([
+        api.users.getAll(),
+        api.projects.getAll(),
+        api.tasks.getAll(),
+      ]);
 
       setData({
         users: users as User[],
@@ -43,25 +55,26 @@ export function useDashboardData() {
       setStatus("success");
     } catch (err) {
       setStatus("error");
+
       setError(
         err instanceof Error
           ? err.message
           : "Unable to load dashboard data."
       );
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     void loadData();
   }, [loadData]);
 
-  const retry = () => {
+  const retry = useCallback(() => {
     void loadData();
-  };
+  }, [loadData]);
 
   return {
-    status,
     data,
+    status,
     error,
     retry,
   };

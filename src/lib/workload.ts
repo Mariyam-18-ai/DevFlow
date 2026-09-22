@@ -37,29 +37,23 @@ export function getAllMemberStats(users: User[], tasks: Task[]): MemberStats[] {
 export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"] as const;
 
 /**
- * Spreads a member's active-task estimated hours across the work week.
- * Deterministic (based on task id, not random) so the chart is stable
- * across renders: each active task lands on one weekday derived from
- * its id, contributing its estimated hours to that day's load.
+ * Places each active task's estimated hours on its real due-date weekday.
+ * This keeps the workload chart grounded in persisted task dates rather
+ * than a synthetic distribution.
  */
 export function getWeeklyLoad(user: User, tasks: Task[]): number[] {
   const stats = getMemberStats(user, tasks);
   const load = [0, 0, 0, 0, 0];
 
   stats.activeTasks.forEach((task) => {
-    const dayIndex = hashToIndex(task.id, WEEKDAYS.length);
-    load[dayIndex] += task.estimatedHours;
+    const day = new Date(`${task.dueDate}T00:00:00`).getDay();
+    const weekdayIndex = day === 0 ? -1 : day - 1;
+    if (weekdayIndex >= 0 && weekdayIndex < WEEKDAYS.length) {
+      load[weekdayIndex] += task.estimatedHours;
+    }
   });
 
   return load;
-}
-
-function hashToIndex(value: string, bucketCount: number): number {
-  let hash = 0;
-  for (let i = 0; i < value.length; i += 1) {
-    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
-  }
-  return hash % bucketCount;
 }
 
 export type LoadLevel = 0 | 1 | 2 | 3;

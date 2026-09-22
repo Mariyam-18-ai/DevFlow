@@ -6,6 +6,9 @@ import { notFound } from "./middleware/notFound.js";
 import { userRoutes } from "./routes/userRoutes.js";
 import { projectRoutes } from "./routes/projectRoutes.js";
 import { taskRoutes } from "./routes/taskRoutes.js";
+import { authRoutes } from "./routes/authRoutes.js";
+import { requireAuth } from "./middleware/authMiddleware.js";
+import { aiRoutes } from "./routes/aiRoutes.js";
 
 export function createApp(): Application {
   const app = express();
@@ -28,9 +31,11 @@ export function createApp(): Application {
     });
   });
 
-  app.use("/api/users", userRoutes);
-  app.use("/api/projects", projectRoutes);
-  app.use("/api/tasks", taskRoutes);
+  app.use("/api/auth", authRoutes);
+  app.use("/api/ai", requireAuth, aiRoutes);
+  app.use("/api/users", requireAuth, userRoutes);
+  app.use("/api/projects", requireAuth, projectRoutes);
+  app.use("/api/tasks", requireAuth, taskRoutes);
 
   app.use(notFound);
   app.use(errorHandler);
