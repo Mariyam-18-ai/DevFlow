@@ -1668,6 +1668,7 @@ export function Dashboard({
                 }
                 onEditUser={editUser}
                 onDeleteUser={(id) => handleDelete("user", id)}
+                currentUserId={currentUserId}
               />
 
               <WorkloadChart

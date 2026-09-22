@@ -11,6 +11,7 @@ interface TeamPulseProps {
   tasks: Task[];
   projects: Project[];
   focusUserId?: string | null;
+  currentUserId?: string | null;
   /** Optional: lets a person's active task row jump to that task's
    * detail in the existing FlowMap, reusing Dashboard's existing
    * task-inspection navigation rather than a new interaction system. */
@@ -28,6 +29,7 @@ export function TeamPulse({
   tasks,
   projects,
   focusUserId,
+  currentUserId,
   onInspectTask,
   onEditUser,
   onDeleteUser,
@@ -130,8 +132,14 @@ export function TeamPulse({
                   {onEditUser && (
                     <button type="button" onClick={() => onEditUser(stats.user)}>Edit</button>
                   )}
-                  {onDeleteUser && (
-                    <button type="button" className="is-danger" onClick={() => onDeleteUser(stats.user.id)}>Delete</button>
+                  {onDeleteUser && stats.user.id === currentUserId && (
+                    <button
+                      type="button"
+                      className="is-danger"
+                      onClick={() => onDeleteUser(stats.user.id)}
+                    >
+                      Delete account
+                    </button>
                   )}
                 </div>
               )}
