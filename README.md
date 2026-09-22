@@ -1,95 +1,138 @@
-# DevFlow — Developer Productivity Dashboard
+# DevFlow — Developer Productivity Platform
 
-A full-stack developer productivity workspace built for the Innovation Hacks Full Stack Development Internship.
+DevFlow is a full-stack developer productivity workspace built for the **Innovation Hacks Full Stack Development Internship — Task 4**. It combines real project/task management with AI-assisted planning and work intelligence so developers can understand what to work on next and why.
 
-## Concept
+## Task 4 highlights
 
-DevFlow answers one question first: **"What should I work on next, and why?"**
+- Real user authentication and authenticated API access
+- Project and task CRUD backed by PostgreSQL
+- Workspace-aware Today, Work, Team and Insights views
+- **AI-assisted task generation** using Google Gemini when configured
+- Human-in-the-loop AI flow: suggestions are reviewed before they become database tasks
+- **AI Work Intelligence** that analyzes the signed-in user's active work and explains the recommended next action
+- Deterministic DevFlow intelligence fallback when Gemini is unavailable
+- Real task/project statistics and blocker detection
+- Notifications and per-user settings
+- Responsive, keyboard-accessible dashboard UI
 
-The **Today** page leads with a **Next Best Action** card — a single, explainable recommendation computed from priority, due-date urgency, whether the task blocks other work, and whether its project is at risk. Below it, a **Flow Map** shows every task moving through To do → In progress → Blocked → Done, and an **Attention Queue** ranks what else deserves focus next. Nothing here is manually curated — it's all derived live from task/project state, so completing or reassigning a task immediately changes what the app recommends.
+## Core workflow
+
+```text
+Sign in
+   ↓
+Select workspace
+   ↓
+Create/open project
+   ↓
+Describe project requirements
+   ↓
+AI generates task suggestions
+   ↓
+User reviews and accepts selected suggestions
+   ↓
+Tasks are persisted in PostgreSQL
+   ↓
+Today / Work / Team / Insights update from live data
+   ↓
+AI Work Intelligence explains the next best action
+```
+
+AI suggestions are **not automatically inserted into the database**. The user remains in control and explicitly accepts the tasks they want to create.
 
 ## Pages
 
-- **Today** — greeting + live stats, Next Best Action, Attention Queue, Flow Map, Today's Tasks, Activity feed.
-- **Work** — every project (health, progress, task counts) plus the full task list with combinable status + priority filters.
-- **Team** — Team Pulse (per-person active/high-priority/blocked task counts), a weekly workload heatmap, and a Blockers view.
-- **Insights** — Flow Velocity (stacked bar of task status across the whole board), the same workload heatmap, and a Project Health matrix.
-- **Settings** — mock/local-only Preferences, Appearance, Notifications and Workspace controls. Nothing here persists; it exists so the page is real rather than a dead link.
-- **Profile** — read-only summary of the current user's role and live workload (active tasks, completed tasks, owned projects), reached via "View profile" in the profile menu.
+- **Today** — personalized active work for the signed-in user, Next Best Action, Attention Queue, Flow Map, Today's Tasks and activity.
+- **Work** — projects and their task lists with filtering and project details.
+- **Team** — team-wide pulse, workload and blockers for the selected workspace.
+- **Insights** — live task status distribution, workload and project health information.
+- **Settings** — Preferences, Appearance, Notifications and Workspace controls. User preferences are persisted per user/browser with localStorage and affect supported notification, landing-page and display-density behavior.
+- **Profile** — current-user profile and workload summary.
 
-Global search (navbar, `⌘K` / `Ctrl+K`) is a command palette that searches tasks, projects and people together and groups the results. Selecting a result jumps back to Today with that search applied. A workspace switcher (sidebar and Settings, same shared state) swaps the visible workspace label; only "Engineering" has data in this build.
+Global search can find tasks, projects and people. The sidebar workspace switcher and Settings workspace control share the same workspace state.
 
-**Focus Mode** is a 25-minute session view (start/pause/reset/mark complete), reachable from Start Focus on the Next Best Action card, a task card, or the Flow Map's task detail panel.
+## AI features
 
-## Visual identity
+### 1. AI-assisted task generation
 
-- Dark graphite background, warm off-white content, amber used sparingly for focus/priority signals
-- Inter for content, JetBrains Mono for metadata/timestamps/scores
-- Hairline borders, left-border status indicators, no shadows or gradients
-- Icons are inline SVG (logo) or unicode glyphs — no icon library is currently wired in
+The task generator sends the selected project's name, description, workspace, health, existing active tasks and the user's optional brief to Gemini. The prompt explicitly asks for concrete tasks and to avoid duplicates. Returned suggestions are validated before being shown to the user.
+
+If Gemini is unavailable or no API key is configured, DevFlow uses a deterministic local planner. The local planner also checks existing active task titles before returning suggestions so it does not repeat tasks already present in the project.
+
+### 2. AI Work Intelligence
+
+Work Intelligence analyzes the signed-in user's active tasks in the selected workspace. It considers priority, deadline pressure, blocking status, project health, current status and estimated effort. Gemini is used when available; otherwise the local DevFlow signal engine produces an explainable recommendation.
+
+The server validates an AI-selected task ID against the real task set before returning the recommendation, preventing the model from inventing a task.
 
 ## Tech stack
 
-- React 19 + Vite + TypeScript
-- Express + TypeScript REST API
-- Prisma 7
-- PostgreSQL
-- Custom CSS (CSS variables for theming, no utility framework)
-
-Task 3 uses a persistent data path:
-
-```text
-React frontend → REST API → Express → Prisma → PostgreSQL
-```
-
-`useDashboardData()` loads users, projects, and tasks from the live API. CRUD mutations use the same API and update the live dashboard state; there is no localStorage/sessionStorage persistence and no mock users/projects/tasks are used by the application.
-
-## Features implemented
-
-- Next Best Action with visible, derived reasons ("High priority", "Due today", "Blocks other work", "Project is at risk")
-- Flow Map: click a task for full detail (project, assignee, priority, status, due date, estimate, what's blocking it) plus Start Focus / Mark Complete / change status
-- Team Pulse, weekly workload heatmap, and a Blockers view, all derived from live task assignment — not static counts
-- Project Health matrix (healthy / at-risk / blocked), computed the same way on the Work grid and on Insights
-- Flow Velocity: live status distribution across all tasks
-- Global command palette search across tasks, projects and people, with recent-activity suggestions when empty
-- Task filter chips (status + priority), combinable, working together with search
-- Loading, empty and error states on every async view, with a working Retry
-- Settings page (Preferences / Appearance / Notifications / Workspace — the Workspace control here shares the same state as the sidebar switcher) and a working profile menu (View profile, Preferences, Sign out) — click-outside and Escape both close it
-- Keyboard/focus accessibility: visible focus rings, `aria-current` on the active nav item, `aria-expanded`/`aria-haspopup` on the profile menu, `role="listbox"`/`role="option"` on the command palette, Escape closes the profile menu and Focus Mode
-- Fully responsive from 1440px down to 320px: sidebar collapses to a mobile drawer, project/team grids reflow to fewer columns, filters wrap instead of clipping
+- **Frontend:** React 19 + Vite + TypeScript
+- **Backend:** Node.js + Express + TypeScript
+- **Database:** PostgreSQL + Prisma 7
+- **AI:** Google Gemini API
+- **Authentication:** custom authenticated API flow with signed tokens
+- **Styling:** custom CSS with CSS variables
+- **Deployment:** Vercel (frontend) + Render (backend)
 
 ## Architecture
 
+```text
+React frontend
+      ↓
+Authenticated REST API
+      ↓
+Express + TypeScript
+      ↓
+Prisma
+      ↓
+PostgreSQL
+
+AI task generation / Work Intelligence
+      ↓
+Google Gemini (when configured)
+      ↓
+Validated response
+      ↓
+Human approval or explainable recommendation
 ```
-src/
-  components/
-    layout/     Navbar, Sidebar, CommandPalette, PageShell, DevFlowLogo
-    ui/         Button, Badge, Chip, ProgressBar, ProgressRing,
-                LoadingState, EmptyState, ErrorState
-    dashboard/  TodayHeader, FocusCard, FocusRail, FlowMap, FocusMode,
-                ActivityFeed
-    projects/   ProjectCard, ProjectGrid, WorkOverview
-    tasks/      TaskCard, TaskList, TaskFilters
-    team/       TeamPulse, WorkloadChart, Blockers
-    insights/   FlowVelocity, ProjectHealthMatrix
-  hooks/        useDashboardData
-  lib/          focusScore, projectHealth, filterUtils, search,
-                badgeTone, taskLinks, workload, workspaces
-  data/         mockActivity (presentation-only recent activity)
-  types/        user, project, task, activity
-  pages/        Dashboard.tsx (Today/Work/Team/Insights), Settings.tsx,
-                Profile.tsx
+
+Business logic is kept in reusable `lib/` utilities and backend services/repositories. Dashboard mutations update the live API-backed application state so project/task changes are reflected across the relevant views.
+
+## Environment variables
+
+### Frontend
+
+Use the environment variables documented in `.env.example`/deployment configuration for the frontend API base URL. Never commit secret values.
+
+### Backend
+
+Configure the backend environment with the required database and authentication settings, including:
+
+```text
+DATABASE_URL
+AUTH_SECRET
+CORS_ORIGIN
+GEMINI_API_KEY        # optional; enables Gemini-powered AI instead of the local fallback
+GEMINI_MODEL          # optional; defaults to gemini-2.5-flash
 ```
 
-Business logic (`lib/`) is pure and separate from presentation — badge tone, focus scoring, project health, workload and search all live there once, reused across every page instead of being recomputed per component. Dashboard mutations are mirrored to the app shell so navbar search, profile, and navigation surfaces stay consistent with the live API-backed state.
-
-## Task 3 backend
-
-The backend exposes CRUD endpoints for users, projects, and tasks, including task status updates. Project health and task status use explicit frontend/API ↔ Prisma enum conversions. Relationship validation prevents tasks from referencing missing projects/users and prevents deletion of users/projects that still have dependent records.
+**Never commit real API keys, database credentials or authentication secrets.**
 
 ## Local development
 
-Start the backend and frontend separately:
+Install frontend dependencies:
+
+```bash
+npm install
+```
+
+Start the frontend:
+
+```bash
+npm run dev
+```
+
+In another terminal, install backend dependencies and start the API:
 
 ```bash
 cd backend
@@ -97,16 +140,36 @@ npm install
 npm run dev
 ```
 
-In another terminal:
+Open the Vite URL shown by the frontend terminal (normally `http://localhost:5173`).
 
-```bash
-npm install
-npm run dev
-```
+## Build verification
 
-Open http://localhost:5173.
+Frontend:
 
 ```bash
 npm run build
-npm run lint
 ```
+
+Backend:
+
+```bash
+cd backend
+npm run build
+```
+
+Both builds should complete without TypeScript errors before submission.
+
+## Deployment
+
+The production architecture uses the existing Vercel frontend deployment and Render backend deployment. The frontend communicates with the deployed Express API, which connects to PostgreSQL.
+
+Before submitting a Task 4 build, verify the latest Git commit is deployed to both services and test the deployed application rather than relying only on localhost.
+
+## Security and data integrity
+
+- Protected application routes require authentication.
+- A normal authenticated user can only delete their own user account through the user-delete endpoint.
+- Project/task relationships are validated before mutations.
+- AI-generated task suggestions require explicit user approval before creation.
+- AI Work Intelligence validates selected task IDs against real database tasks.
+- Environment secrets are kept outside committed source files.
