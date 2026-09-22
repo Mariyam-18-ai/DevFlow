@@ -87,6 +87,38 @@ Current-user profile and workload summary.
 ### Global Search
 Search across tasks, projects, and people.
 
+# Screenshots
+
+## Today Dashboard
+
+The Today dashboard provides a personalized view of the signed-in user's active work, including the Flow Map, Attention Queue, Next Best Action, and AI Work Intelligence.
+
+![DevFlow Today Dashboard](docs/screenshots/today.png)
+
+## Work & Projects
+
+The Work view provides project management, project details, task organization, and project-focused AI assistance.
+
+![DevFlow Work](docs/screenshots/work.png)
+
+## Team
+
+The Team view provides workspace-level workload visibility, team activity, and blockers.
+
+![DevFlow Team](docs/screenshots/team.png)
+
+## AI-Assisted Task Generation
+
+DevFlow can analyze project context and generate actionable task suggestions. Suggestions remain under human control and are only persisted after the user explicitly accepts them.
+
+![DevFlow AI Task Generation](docs/screenshots/ai-task-generation.png)
+
+## Settings
+
+The Settings page provides user preferences, appearance, notification, and workspace controls.
+
+![DevFlow Settings](docs/screenshots/settings.png)
+
 # AI Capabilities
 
 Task 4 introduced two major AI-assisted capabilities.
