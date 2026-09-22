@@ -191,9 +191,16 @@ export interface GeneratedTaskSuggestion {
   suggestedDays: number;
 }
 
-function localTaskSuggestions(project: { name: string; description: string }): GeneratedTaskSuggestion[] {
+function localTaskSuggestions(
+  project: { name: string; description: string },
+  existingTitles: string[] = [],
+): GeneratedTaskSuggestion[] {
   const name = project.name.trim();
-  return [
+  const normalize = (value: string) =>
+    value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const existing = new Set(existingTitles.map(normalize));
+
+  const candidates: GeneratedTaskSuggestion[] = [
     {
       title: `Define ${name} implementation plan`,
       description: `Break ${name} into clear technical steps, dependencies, and acceptance criteria.`,
@@ -218,7 +225,27 @@ function localTaskSuggestions(project: { name: string; description: string }): G
       blocking: false,
       suggestedDays: 5,
     },
+    {
+      title: `Add automated tests for ${name}`,
+      description: `Create focused automated tests for the main ${name} workflow and important failure cases.`,
+      priority: "medium",
+      estimatedHours: 4,
+      blocking: false,
+      suggestedDays: 7,
+    },
+    {
+      title: `Document ${name} workflow`,
+      description: `Document the expected workflow, key dependencies, and verification steps so the feature is easier to maintain.`,
+      priority: "low",
+      estimatedHours: 2,
+      blocking: false,
+      suggestedDays: 9,
+    },
   ];
+
+  return candidates
+    .filter((candidate) => !existing.has(normalize(candidate.title)))
+    .slice(0, 5);
 }
 
 export async function generateTaskSuggestions(
@@ -247,7 +274,10 @@ export async function generateTaskSuggestions(
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
-  const fallback = localTaskSuggestions(project);
+  const fallback = localTaskSuggestions(
+    project,
+    project.tasks.map((task) => task.title),
+  );
   if (!apiKey) {
     return {
       project: { id: project.id, name: project.name, description: project.description },

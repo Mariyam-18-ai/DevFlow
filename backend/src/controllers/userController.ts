@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { userService } from "../services/userService.js";
+import { AppError } from "../types/index.js";
 import { userInputSchema } from "../schemas/userSchema.js";
 
 export const userController = {
@@ -73,7 +74,20 @@ export const userController = {
     next: NextFunction
   ): Promise<void> {
     try {
-      await userService.delete(String(req.params.id));
+      const requestedUserId = String(req.params.id);
+
+      // A normal authenticated user may only delete their own account.
+      // This prevents an authenticated client from deleting another member
+      // simply by changing the user id in the request URL.
+      if (req.userId !== requestedUserId) {
+        throw new AppError(
+          "You can only delete your own account.",
+          403,
+          "FORBIDDEN"
+        );
+      }
+
+      await userService.delete(requestedUserId);
       res.status(204).send();
     } catch (err) {
       next(err);
